@@ -1,47 +1,157 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
-import App, { HEALTH_TIMEOUT_MS } from './App';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import App from './App';
+import { REQUEST_TIMEOUT_MS } from './api';
+import type { PlanInput } from './types';
+import { criteria, earlyTrip, planFor, result, savedPlan } from './test/fixtures';
 
-function up() { return new Response(JSON.stringify({ status: 'UP', database: 'UP' }), { status: 200 }); }
+const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
+beforeEach(() => { window.history.replaceState({}, '', '/'); localStorage.clear(); });
+afterEach(() => { window.history.replaceState({}, '', '/'); localStorage.clear(); });
+function fillSearch() {
+  fireEvent.change(screen.getByLabelText('Miasto startu'), { target: { value: criteria.origin } });
+  fireEvent.change(screen.getByLabelText('Cel podróży'), { target: { value: criteria.destination } });
+  fireEvent.change(screen.getByLabelText('Data wyjazdu'), { target: { value: criteria.departureDate } });
+  fireEvent.change(screen.getByLabelText('Data powrotu'), { target: { value: criteria.returnDate } });
+}
+function mockApi() {
+  const previews: PlanInput[] = [];
+  const fetch = vi.fn(async (url: string, options: RequestInit = {}) => {
+    if (url.endsWith('/searches')) return json(result);
+    if (url.endsWith('/plans/preview')) { const input = JSON.parse(String(options.body)) as PlanInput; previews.push(input); return json(planFor(input)); }
+    if (url.endsWith('/plans') && options.method === 'POST') { const input = JSON.parse(String(options.body)) as PlanInput; return json({ plan: { ...planFor(input), id: savedPlan.id, shareUrl: savedPlan.shareUrl }, ownerToken: 'private-test-owner-token' }, 201); }
+    if (url.includes('/shared-plans/')) { const { shareUrl: _private, ...publicPlan } = savedPlan; return json(publicPlan); }
+    if (url.endsWith('/plans/saved-test') && options.method === 'GET') return json(savedPlan);
+    if (url.endsWith('/plans/saved-test') && options.method === 'PUT') return json({ ...planFor(JSON.parse(String(options.body)) as PlanInput), id: savedPlan.id, shareUrl: savedPlan.shareUrl });
+    if (url.endsWith('/plans/saved-test') && options.method === 'DELETE') return new Response(null, { status: 204 });
+    throw new Error(`Unexpected API request: ${url}`);
+  });
+  vi.stubGlobal('fetch', fetch); return { fetch, previews };
+}
+async function startPlan() { fillSearch(); fireEvent.click(screen.getByRole('button', { name: /Znajdź połączenia/ })); await screen.findByRole('heading', { name: 'Twój plan zwiedzania' }); await waitFor(() => expect(screen.getByRole('button', { name: /Zapisz plan/ })).toBeEnabled()); }
 
-describe('połączenie z działającym API', () => {
-  it('pokazuje ładowanie i dopiero po potwierdzeniu API zgłasza gotowość', async () => {
-    let resolve!: (response: Response) => void;
-    const fetch = vi.fn(() => new Promise<Response>((done) => { resolve = done; }));
-    vi.stubGlobal('fetch', fetch);
-    render(<App />);
-    expect(screen.getByRole('status')).toHaveTextContent('Sprawdzamy połączenie');
-    expect(screen.getByRole('button')).toBeDisabled();
-    await act(async () => { resolve(up()); });
-    expect(screen.getByRole('status')).toHaveTextContent('Połączenie potwierdzone');
-    expect(fetch).toHaveBeenCalledWith('http://localhost:8080/api/v1/health', expect.objectContaining({ signal: expect.any(AbortSignal) }));
-    expect(screen.getByRole('button')).toBeEnabled();
+describe('wyszukiwanie i planowanie z API', () => {
+  it('waliduje pola i daty, ustawia komunikaty przy polach i fokus bez wywołania API', () => {
+    const fetch = vi.fn(); vi.stubGlobal('fetch', fetch); render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /Znajdź połączenia/ }));
+    expect(screen.getByText('Wpisz miasto startu.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Miasto startu')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText('Miasto startu')).toHaveFocus();
+    fillSearch(); fireEvent.change(screen.getByLabelText('Data powrotu'), { target: { value: '2099-12-04' } });
+    fireEvent.click(screen.getByRole('button', { name: /Znajdź połączenia/ }));
+    expect(screen.getByText('Powrót nie może poprzedzać wyjazdu.')).toBeInTheDocument(); expect(fetch).not.toHaveBeenCalled();
   });
 
-  it('po błędzie HTTP pozwala ponowić sprawdzenie i odzyskać połączenie', async () => {
-    const fetch = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({ status: 'DOWN', database: 'DOWN' }), { status: 503 })).mockResolvedValueOnce(up());
-    vi.stubGlobal('fetch', fetch);
-    render(<App />);
-    expect(await screen.findByText('Nie udało się połączyć')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Sprawdź ponownie' }));
-    expect(await screen.findByText('Połączenie potwierdzone')).toBeInTheDocument();
+  it('wysyła pojedynczy wybrany priorytet, pokazuje taryfy i wyraźnie oznacza dane testowe', async () => {
+    const { fetch } = mockApi(); render(<App />); fillSearch();
+    fireEvent.click(screen.getByRole('radio', { name: /Krótszy dojazd/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Znajdź połączenia/ }));
+    await screen.findByRole('heading', { name: 'Twój plan zwiedzania' });
+    expect(fetch.mock.calls[0][0]).toBe('http://localhost:8080/api/v1/searches');
+    expect(JSON.parse(String(fetch.mock.calls[0][1]?.body)).priority).toBe('SHORTEST_TRAVEL_TIME');
+    expect(screen.getByText('Dane testowe — to nie są rzeczywiste oferty.')).toBeInTheDocument();
+    expect(screen.getAllByText('Testowa ulga dla studentów.', { exact: false }).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Łączny koszt niepotwierdzony').length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: /Strona przewoźnika/ })[0]).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(screen.queryByText(/najtańsz/i)).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['NO_CONNECTION', 'Brak potwierdzonych połączeń'],
+    ['PROVIDER_ERROR', 'Nie udało się sprawdzić połączeń'],
+  ])('rozróżnia stan %s', async (status, heading) => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json({ ...result, status, roundTripOptions: [], testData: false })));
+    render(<App />); fillSearch(); fireEvent.click(screen.getByRole('button', { name: /Znajdź połączenia/ }));
+    expect(await screen.findByRole('heading', { name: heading })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Twój plan zwiedzania' })).not.toBeInTheDocument();
+  });
+
+  it('zachowuje punkty po wcześniejszym powrocie, pokazuje powód konfliktu i obsługuje dodanie, kolejność, usunięcie i zapis', async () => {
+    const { fetch, previews } = mockApi(); render(<App />); await startPlan();
+    const original = previews[0].items[0];
+    fireEvent.click(screen.getByRole('button', { name: 'Wybierz połączenie' }));
+    await screen.findByText('Nie zdążysz na wcześniejszy powrót po tej wizycie.');
+    expect(previews.at(-1)?.selectedRoundTrip.id).toBe(earlyTrip.id);
+    expect(previews.at(-1)?.items[0].id).toBe(original.id);
+    expect(previews.at(-1)?.items[0].startsAt).not.toBeNull();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Dodaj: Galeria testowa' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Dodaj: Galeria testowa' }));
+    await screen.findByRole('button', { name: 'Przesuń Galeria testowa wcześniej' });
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Przesuń Galeria testowa wcześniej' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Przesuń Galeria testowa wcześniej' }));
+    await waitFor(() => expect(previews.at(-1)?.items[0].attractionId).toBe('test-gallery'));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Usuń Muzeum testowe' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Usuń Muzeum testowe' }));
+    await waitFor(() => expect(previews.at(-1)?.items).toHaveLength(1));
+    await waitFor(() => expect(screen.getByRole('button', { name: /Zapisz plan/ })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: /Zapisz plan/ }));
+    expect(await screen.findByText(/Plan zapisany. Możesz udostępnić/)).toBeInTheDocument();
+    expect(localStorage.getItem('city-break-owner:saved-test')).toBe('private-test-owner-token');
+    expect(window.location.pathname).toBe('/plans/saved-test');
+    expect(window.location.href).not.toContain('private-test-owner-token');
+    expect(screen.getByLabelText('Link tylko do odczytu')).toHaveValue(savedPlan.shareUrl);
+    expect(document.body.textContent).not.toContain('private-test-owner-token');
+    const create = fetch.mock.calls.find(([url, options]) => url.endsWith('/plans') && options?.method === 'POST');
+    expect(create).toBeDefined(); expect(JSON.parse(String(create?.[1]?.body)).items[0].attractionId).toBe('test-gallery');
+  });
+
+  it('otwiera zapisany plan z uprawnieniem właściciela i odświeża katalog bez nadpisania punktów', async () => {
+    const { fetch, previews } = mockApi(); localStorage.setItem('city-break-owner:saved-test', 'private-test-owner-token');
+    window.history.replaceState({}, '', '/plans/saved-test'); render(<App />);
+    await screen.findByRole('heading', { name: 'Twój plan zwiedzania' });
+    expect(fetch.mock.calls[0][1]?.headers).toEqual(expect.objectContaining({ Authorization: 'Bearer private-test-owner-token' }));
+    expect(screen.getByRole('button', { name: 'Usuń Muzeum testowe' })).toBeInTheDocument();
+    expect(previews).toHaveLength(0);
+    expect(screen.getByRole('button', { name: /Zapisz zmiany/ })).toBeDisabled();
+  });
+
+  it('po utracie połączenia zachowuje czytelny błąd i pozwala ponowić wyszukiwanie', async () => {
+    const fetch = vi.fn().mockRejectedValueOnce(new TypeError('offline')).mockResolvedValueOnce(json({ ...result, status: 'NO_CONNECTION', roundTripOptions: [] }));
+    vi.stubGlobal('fetch', fetch); render(<App />); fillSearch();
+    fireEvent.click(screen.getByRole('button', { name: /Znajdź połączenia/ }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Nie udało się połączyć');
+    fireEvent.click(screen.getByRole('button', { name: /Znajdź połączenia/ }));
+    await screen.findByRole('heading', { name: 'Brak potwierdzonych połączeń' });
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
-  it('nie traktuje pustej odpowiedzi jako potwierdzenia gotowości', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status: 200 })));
-    render(<App />);
-    expect(await screen.findByText(/nieprawidłową odpowiedź/)).toBeInTheDocument();
+  it('kończy wiszące żądanie i ponownie udostępnia przycisk wyszukiwania', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('fetch', vi.fn((_url, options: RequestInit) => new Promise((_resolve, reject) => { options.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError'))); })));
+    render(<App />); fillSearch(); fireEvent.click(screen.getByRole('button', { name: /Znajdź połączenia/ }));
+    expect(screen.getByRole('status')).toHaveTextContent('Szukamy połączeń');
+    await act(async () => { await vi.advanceTimersByTimeAsync(REQUEST_TIMEOUT_MS); });
+    expect(screen.getByRole('alert')).toHaveTextContent('Odpowiedź trwała zbyt długo');
+    expect(screen.getByRole('button', { name: /Znajdź połączenia/ })).toBeEnabled();
+  });
+});
+
+describe('publiczny plan tylko do odczytu', () => {
+  it.each(['/shared/%', '/plans/%'])('obsługuje nieprawidłowe kodowanie linku %s', (path) => {
+    const fetch = vi.fn(); vi.stubGlobal('fetch', fetch);
+    window.history.replaceState({}, '', path); render(<App />);
+    expect(screen.getByRole('heading', { name: 'Nieprawidłowy link do planu.' })).toBeInTheDocument();
+    expect(fetch).not.toHaveBeenCalled();
   });
 
-  it('kończy zbyt długie żądanie i pozwala spróbować ponownie', async () => {
-    vi.useFakeTimers();
-    vi.stubGlobal('fetch', vi.fn((_url, options: RequestInit) => new Promise((_resolve, reject) => {
-      options.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
-    })));
-    render(<App />);
-    await act(async () => { await vi.advanceTimersByTimeAsync(HEALTH_TIMEOUT_MS); });
-    expect(screen.getByRole('status')).toHaveTextContent('Sprawdzanie trwało zbyt długo');
-    expect(screen.getByRole('button')).toBeEnabled();
+  it('nie przesyła tokenu właściciela i nie pokazuje kontrolek edycji ani poświadczeń', async () => {
+    const { fetch } = mockApi(); localStorage.setItem('city-break-owner:saved-test', 'private-test-owner-token');
+    window.history.replaceState({}, '', '/shared/test-public-token'); render(<App />);
+    expect(await screen.findByText('Tylko do odczytu')).toBeInTheDocument();
+    expect(fetch.mock.calls[0][0]).toContain('/shared-plans/test-public-token');
+    expect(fetch.mock.calls[0][1]?.headers).not.toHaveProperty('Authorization');
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.queryByRole('form')).not.toBeInTheDocument();
+    expect(document.body.textContent).not.toContain('private-test-owner-token');
+    const links = screen.getAllByRole('link', { name: /Strona przewoźnika/ });
+    expect(links[0]).toHaveAttribute('referrerpolicy', 'no-referrer');
+    expect(within(screen.getByRole('main')).getByRole('heading', { name: 'Plan zwiedzania' })).toBeInTheDocument();
+  });
+
+  it('obsługuje usunięty publiczny plan', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json({ detail: 'Ten plan nie istnieje lub został usunięty.' }, 404)));
+    window.history.replaceState({}, '', '/shared/deleted'); render(<App />);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Ten plan nie istnieje lub został usunięty.');
+    expect(screen.queryByRole('button', { name: /Zapisz/ })).not.toBeInTheDocument();
   });
 });

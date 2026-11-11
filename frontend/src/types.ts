@@ -1,0 +1,16 @@
+export type Priority = 'LOWEST_TOTAL_COST' | 'SHORTEST_TRAVEL_TIME' | 'FEWEST_TRANSFERS' | 'MOST_TIME_AT_DESTINATION';
+export type FareType = 'STANDARD' | 'REDUCED';
+export type Criteria = { origin: string; destination: string; departureDate: string; returnDate: string; priority: Priority; currency: string; fareType: FareType };
+export type Source = { sourceId: string; url: string | null; checkedAt: string | null; status: 'OK' | 'NO_CONNECTION' | 'PROVIDER_ERROR'; message: string | null };
+export type Price = { status: 'KNOWN' | 'UNKNOWN' | 'PROVIDER_ERROR'; amount: string | null; currency: string; fareType: FareType; eligibility: string | null; sourceId: string; sourceUrl: string | null; checkedAt: string | null; reason?: string | null; testData?: boolean };
+export type Place = { name: string; latitude: number | null; longitude: number | null };
+export type Segment = { id: string; mode: string; operator: string; origin: Place; destination: Place; departureAt: string; arrivalAt: string; prices: Price[]; bookingUrl: string | null; mapUrl: string | null };
+export type Journey = { departureAt: string; arrivalAt: string; segments: Segment[] };
+export type CostSummary = { total: string | null; currency: string; fareType: FareType; complete: boolean; missingComponents: string[] };
+export type RoundTrip = { id: string; outbound: Journey; returnJourney: Journey; travelMinutes: number; transfers: number; timeAtDestinationMinutes: number; costSummary: CostSummary; recommendedAttractionIds: string[] };
+export type Attraction = { id: string; name: string; location: Place; visitMinutes: number; entryPrices: Price[]; openingHours: { status: 'KNOWN' | 'UNKNOWN'; intervals: { opensAt: string; closesAt: string }[] }; sources: Source[] };
+export type SearchResult = { searchId: string; criteria: Criteria; status: 'OK' | 'PARTIAL' | 'NO_CONNECTION' | 'PROVIDER_ERROR'; roundTripOptions: RoundTrip[]; attractions: Attraction[]; sources: Source[]; testData: boolean };
+export type ItemInput = { id: string; attractionId: string; startsAt: string | null; visitMinutes: number };
+export type PlanItem = { id: string; attractionId: string; name: string; startsAt: string; endsAt: string; transferMinutesFromPrevious: number | null; conflicts: { code: string; reason: string; itemId: string }[] };
+export type Plan = { id: string | null; criteria: Criteria; selectedRoundTrip: RoundTrip; items: PlanItem[]; costSummary: CostSummary; createdAt: string | null; updatedAt: string | null; testData: boolean; shareUrl?: string | null };
+export type PlanInput = { criteria: Criteria; selectedRoundTrip: RoundTrip; items: ItemInput[] };
