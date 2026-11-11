@@ -77,12 +77,12 @@ class HealthIntegrationTest {
     }
 
     @Test
-    void unimplementedEndpointsHaveProblemResponse() throws Exception {
-        mvc.perform(get("/api/v1/plans/missing"))
+    void unknownEndpointsHaveProblemResponse() throws Exception {
+        mvc.perform(get("/api/v1/unknown-endpoint"))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.status").value(404))
-                .andExpect(jsonPath("$.instance").value("/api/v1/plans/missing"));
+                .andExpect(jsonPath("$.instance").value("/api/v1/unknown-endpoint"));
     }
 
     @Test
