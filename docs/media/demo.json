@@ -1,0 +1,46 @@
+{
+  "recordedAt": "2026-11-11T16:31:49.835Z",
+  "mode": "demo",
+  "testData": true,
+  "purpose": "Technical workflow only. Fictional fares and schedules; not proof of live route availability.",
+  "sourceRevision": "2abcc061de7d26a6d4a9dd4a2d8c7a4185615889",
+  "browserPlaybackVerified": true,
+  "sha256": "5893b8b65f7e91f0ede96a34a9357458e4ecd4011960af0bdbc11c95a4aa97dc",
+  "format": "GIF",
+  "frames": 7,
+  "durationMs": 15000,
+  "width": 1240,
+  "height": 800,
+  "bytes": 409989,
+  "encoder": "Pillow 10.2.0",
+  "steps": [
+    {
+      "label": "1 / Wyszukiwanie podróży",
+      "durationMs": 1600
+    },
+    {
+      "label": "2 / Wyniki i alternatywne powroty",
+      "durationMs": 2000
+    },
+    {
+      "label": "3 / Wybrano wcześniejszy powrót: 14:00",
+      "durationMs": 1800
+    },
+    {
+      "label": "4 / Konflikt ma powód; wybrane miejsca zostają",
+      "durationMs": 2600
+    },
+    {
+      "label": "5 / Zapis i niezależny link do odczytu",
+      "durationMs": 2200
+    },
+    {
+      "label": "6 / Odbiorca ogląda plan bez prawa edycji",
+      "durationMs": 2400
+    },
+    {
+      "label": "7 / Publiczny harmonogram zachowuje ostrzeżenia",
+      "durationMs": 2400
+    }
+  ]
+}
