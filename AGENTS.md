@@ -26,6 +26,12 @@ Budujemy responsywny planer city breaków dla studentów. Użytkownik podaje mie
 
 ## Weryfikacja
 
+- Backend: `cd backend`, `./mvnw spring-boot:run`; testy `./mvnw test`, budowanie `./mvnw package`. Wymagane JDK 17–25.
+- Frontend: `cd frontend`, `npm ci`, `npm run dev`; testy `npm test`, budowanie `npm run build`. Wymagane Node 22.22.2+ (linia 22), npm 10.
+- Sprawdzenie komunikacji: otwórz `http://localhost:5173`; health API to `GET http://127.0.0.1:8080/api/v1/health` i rzeczywisty odczyt SQLite.
+- Konfiguracja: `backend/.env.example` oraz `frontend/.env.example`; Spring wymaga wyeksportowanych zmiennych, Vite wczytuje `.env.local`. Sekrety nigdy nie trafiają do `VITE_*`.
+- `backend/` odpowiada za API i dane, `frontend/` za widoki; `docs/api-contract.md` jest wspólną umową, a jej zmiany uzgadnia koordynator.
+
 - Ustal i sprawdź faktyczne polecenia uruchomienia i testów w SOL-114. Zapisz je w README.
 - Uruchom testy dotyczące zmienionego zachowania. Zmiany kontraktu sprawdź przez frontend i API.
 - W podsumowaniu podaj identyfikator zgłoszenia, zmienione obszary, wykonane komendy, wyniki i otwarte problemy.

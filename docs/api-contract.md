@@ -144,7 +144,8 @@ przy konkretnych punktach i podaje powód. Niczego nie usuwa automatycznie.
 
 ### Dostęp
 
-Utworzenie planu generuje niezależne losowe tokeny właściciela i udostępnienia.
+Utworzenie planu generuje niezależne losowe tokeny właściciela i udostępnienia,
+każdy z co najmniej 256 bitami losowości.
 Token właściciela (co najmniej 256 bitów losowości) przekazuje się wyłącznie
 w `Authorization: Bearer …` przy GET/PUT/DELETE właścicielskich; baza przechowuje
 jego hash. Publiczny token uprawnia wyłącznie do GET udostępnionego planu.
@@ -152,6 +153,8 @@ API sprawdza prawo edycji/usunięcia na serwerze. Nie obsługuje PUT/DELETE
 na publicznym endpointcie (405); podanie tokenu publicznego jako właścicielskiego
 nie daje uprawnień (403). Usunięcie planu unieważnia publiczny link (404).
 Tokenów nie umieszczamy w logach; środowisko publiczne wymaga HTTPS.
+Widok udostępniony ustawia `Referrer-Policy: no-referrer`, aby linki zewnętrzne
+nie ujawniały tokenu udostępnienia w nagłówku Referer.
 
 ## Błędy i konfiguracja
 
