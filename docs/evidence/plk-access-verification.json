@@ -1,0 +1,18 @@
+{
+  "testData": false,
+  "request": {
+    "url": "https://pdp-api.plk-sa.pl/api/v1/schedules?dateFrom=2026-12-05&dateTo=2026-12-06",
+    "checkedAt": "2026-11-11T08:19:28Z",
+    "httpStatus": 401,
+    "sha256": "187591a2a6f89be9e70fd3cfe70a1807caa49a7c760b9aa166e6677821b95c59",
+    "responseBytes": 310
+  },
+  "credentialsSupplied": false,
+  "requestedDates": [
+    "2026-12-05",
+    "2026-12-06"
+  ],
+  "routeNotRequested": "No station dictionary available without API key; no claim of testing a particular station pair.",
+  "interpretation": "Unauthenticated access attempt, not a confirmed absence of rail connections.",
+  "responseExcerpt": "{\"error\":\"Unauthorized\",\"errorCode\":\"MissingKey\",\"message\":\"Brak klucza API. U\\u017Cyj nag\\u0142\\u00F3wka X-Api-Key lub Authorization: Bearer {api_key}\",\"messageEn\":\"Missing API key. Use X-Api-Key header or Authorization: Bearer {api_key}\",\"timestamp\":\"2026-11-11T08:19:28.3420816Z\",\"path\":\"/api/v1/schedules\"}"
+}

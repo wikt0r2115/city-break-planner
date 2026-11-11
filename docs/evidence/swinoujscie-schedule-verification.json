@@ -1,0 +1,40 @@
+{
+  "testData": false,
+  "request": {
+    "url": "https://www.zdmiz.swi.pl/images/rozklad%20od%2017%20pazdziernika%202026.jpg",
+    "checkedAt": "2026-11-11T08:19:28Z",
+    "httpStatus": 200,
+    "sha256": "821664e3389890686c04b3364f3b8483103a9feca2069d2bacfcd6b5c35d49a4",
+    "responseBytes": 377905
+  },
+  "sourcePage": "https://www.zdmiz.swi.pl/rozklad-kursowania-promow",
+  "imageManuallyInspected": true,
+  "validFrom": "2026-10-17",
+  "researchDate": "2026-12-05",
+  "selectedPublishedDepartures": [
+    {
+      "origin": "Centrum",
+      "destination": "Warszów",
+      "departureTime": "10:00",
+      "mode": "FERRY"
+    },
+    {
+      "origin": "Centrum",
+      "destination": "Warszów",
+      "departureTime": "10:30",
+      "mode": "LOCAL_TRANSIT",
+      "line": "P1"
+    },
+    {
+      "origin": "Warszów",
+      "destination": "Centrum",
+      "departureTime": "10:30",
+      "mode": "FERRY"
+    }
+  ],
+  "arrivalTimes": null,
+  "standardPrice": null,
+  "reducedPrice": null,
+  "currency": "PLN",
+  "interpretation": "Published image timetable, not API/date-specific live availability. Green cells designate P1 bus, not ferry. Current price not established by this source."
+}
