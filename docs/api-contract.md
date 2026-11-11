@@ -1,8 +1,8 @@
 # Kontrakt REST — City Break Planner v1
 
 Wspólna baza dla SOL-116–119. Zmiany uzgadnia koordynator przed zmianą klientów
-i serwera. SOL-114 implementuje wyłącznie `GET /api/v1/health`; pozostałe
-endpointy są planowane, a nie zastąpione atrapami.
+i serwera. `GET /api/v1/health` pochodzi z SOL-114; wyszukiwanie, przeliczanie
+i zapis planów powstają w SOL-116–118, a rzeczywiste integracje w SOL-119.
 
 ## Konwencje i stan aplikacji
 
@@ -116,6 +116,7 @@ Nieznane godziny nie potwierdzają dostępności atrakcji.
 
 | Endpoint | Wynik |
 | --- | --- |
+| `POST /api/v1/plans/preview` | 200, przeliczony szkic bez zapisu i poświadczeń |
 | `POST /api/v1/plans` | 201, `Location: /api/v1/plans/{id}`, `{plan, ownerToken}` |
 | `GET /api/v1/plans/{id}` | 200, plan właściciela |
 | `PUT /api/v1/plans/{id}` | 200, przeliczony plan właściciela |
@@ -125,11 +126,19 @@ Nieznane godziny nie potwierdzają dostępności atrakcji.
 Żądanie utworzenia/aktualizacji: `criteria` (jak wyszukiwanie),
 `selectedRoundTrip` (pełny wariant), `items[]`.
 Element wejściowy: `id` (stabilny, nadany przez klienta), `attractionId`,
-`startsAt`, `visitMinutes`. Serwer weryfikuje oferty i ceny po swojej stronie,
+`startsAt` (RFC3339 albo null dla nowo dodanego punktu), `visitMinutes`.
+Dla null serwer wybiera najwcześniejszy możliwy termin, uwzględniając
+poprzedni punkt, godziny otwarcia i dojazdy. Po pierwszym przeliczeniu klient
+przesyła otrzymany termin, aby zmiana powrotu zachowała wybory użytkownika.
+Serwer weryfikuje oferty i ceny po swojej stronie,
 oblicza godziny końca, dojazdy, konflikty i sumę; nie ufa sumom klienta.
 
 Plan w odpowiedzi: `id`, `criteria`, `selectedRoundTrip`, `items[]`,
 `costSummary`, `createdAt`, `updatedAt`, `testData`.
+W szkicu z `/plans/preview` `id`, `createdAt` i `updatedAt` mają wartość null,
+nie ma `shareUrl`. Endpoint nie tworzy planu ani tokenów i pozwala sprawdzić
+konflikty przed świadomym zapisem. Operacje zapisu i aktualizacji zawsze
+ponownie wyliczają plan po stronie serwera.
 Właściciel dodatkowo otrzymuje `shareUrl` (frontendowe `/shared/{shareToken}`).
 Publiczne DTO nie zawiera tokenów, linku właściciela ani poświadczeń.
 `ownerToken` zwracany jest tylko przy utworzeniu i nie znajduje się w obiekcie planu.
@@ -180,3 +189,15 @@ w wyszukiwaniu pozostaje w odpowiedzi 200 i `sources`, by zachować inne wyniki.
 CORS dopuszcza jawne originy z `APP_CORS_ALLOWED_ORIGINS`, domyślnie
 `http://localhost:5173`, bez wildcard i bez cookies. Klucze dostawców są
 wyłącznie po stronie backendu; żadnych sekretów w zmiennych `VITE_*`.
+
+## Rozdzielenie danych rzeczywistych i testowych
+
+Domyślny tryb nie generuje ofert zastępujących brakujące integracje. Brak
+skonfigurowanych źródeł oznacza `PROVIDER_ERROR` z czytelnym opisem i pustymi
+wynikami, nigdy potwierdzony brak kursów. Jawne `APP_DATA_MODE=demo` uruchamia
+kontrolowanego dostawcę testowego do weryfikacji logiki i widoków. Każdy taki wynik
+i zapisany na jego podstawie plan ma `testData: true`; frontend wyraźnie to
+oznacza. Nie są to rzeczywiste ceny ani rozkłady dla wskazanych dat.
+
+Publiczne linki mają postać `${APP_FRONTEND_BASE_URL}/shared/{shareToken}`;
+domyślne `APP_FRONTEND_BASE_URL` to `http://localhost:5173`.
