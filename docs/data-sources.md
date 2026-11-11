@@ -40,6 +40,21 @@ Właściciel powinien zdecydować:
 
 ## Transport i dostęp
 
+### Zatwierdzony etap wdrożenia — 11 listopada 2026
+
+Po zapoznaniu się z ograniczeniami właściciel zaakceptował podłączenie
+potwierdzonych źródeł: lokalnego rozkładu linii 100 w Gdańsku, na odcinku
+Dworzec Główny ↔ Targ Rybny w aktualnie dostępnych datach, oraz dostępnych
+oficjalnych cenników atrakcji. Jest to etap pośredni. **Zakres kolei,
+samolotów, autokarów, promów, pozostałych tras i dostawców cen pozostaje
+do doprecyzowania w dalszym etapie projektu.**
+
+Zgoda nie zmienia publikowanego cennika w ofertę konkretnego kursu i nie
+potwierdza grudniowej wyceny Warszawa ↔ Gdańsk. Poniższa tabela zachowuje
+wyniki badania; uruchomiony adapter musi osobno wykonać rzeczywisty odczyt.
+Jeśli źródło zwróci odmowę dostępu przy odczycie serwera, aplikacja pokazuje
+ten brak i zachowuje dane pozostałych działających źródeł.
+
 | Źródło i zakres | Dostęp i wynik próby | Cena / ulga | Ograniczenie i pewność |
 | --- | --- | --- | --- |
 | [PKP PLK — otwarte dane](https://www.plk-sa.pl/klienci-i-kontrahenci/api-otwarte-dane), [dokumentacja](https://pdp-api.plk-sa.pl/api-documentation) | Oficjalne API rozkładów, realizacji i utrudnień. Wymaga `X-API-Key`. Anonimowy GET `/api/v1/schedules?dateFrom=2026-12-05&dateTo=2026-12-06` dał **401**; nie pobrano stacji ani kursów. [Dowód](evidence/plk-access-verification.json). | Dokumentacja nie potwierdza API cen biletów. Taryfa normalna i ulgowa dla dat przykładu: **nieustalone**. | Bezpłatna rejestracja nie jest aktywnym dostępem. Wysoka pewność wymogu klucza i odmowy anonimowego odczytu; brak potwierdzenia pokrycia wybranej trasy/dat. |

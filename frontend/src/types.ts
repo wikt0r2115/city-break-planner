@@ -1,8 +1,8 @@
 export type Priority = 'LOWEST_TOTAL_COST' | 'SHORTEST_TRAVEL_TIME' | 'FEWEST_TRANSFERS' | 'MOST_TIME_AT_DESTINATION';
 export type FareType = 'STANDARD' | 'REDUCED';
 export type Criteria = { origin: string; destination: string; departureDate: string; returnDate: string; priority: Priority; currency: string; fareType: FareType };
-export type Source = { sourceId: string; url: string | null; checkedAt: string | null; status: 'OK' | 'NO_CONNECTION' | 'PROVIDER_ERROR'; message: string | null };
-export type Price = { status: 'KNOWN' | 'UNKNOWN' | 'PROVIDER_ERROR'; amount: string | null; currency: string; fareType: FareType; eligibility: string | null; sourceId: string; sourceUrl: string | null; checkedAt: string | null; reason?: string | null; testData?: boolean };
+export type Source = { sourceId: string; url: string | null; checkedAt: string | null; status: 'OK' | 'NO_CONNECTION' | 'NO_COVERAGE' | 'PROVIDER_ERROR'; message: string | null; reasonCode?: string | null };
+export type Price = { status: 'KNOWN' | 'UNKNOWN' | 'PROVIDER_ERROR'; amount: string | null; currency: string; fareType: FareType; eligibility: string | null; sourceId: string; sourceUrl: string | null; checkedAt: string | null; reason?: string | null; testData?: boolean; basis?: 'LIVE_OFFER' | 'PUBLISHED_TARIFF' | 'TEST_DATA' | null };
 export type Place = { name: string; latitude: number | null; longitude: number | null };
 export type Segment = { id: string; mode: string; operator: string; origin: Place; destination: Place; departureAt: string; arrivalAt: string; prices: Price[]; bookingUrl: string | null; mapUrl: string | null };
 export type Journey = { departureAt: string; arrivalAt: string; segments: Segment[] };

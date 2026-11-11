@@ -9,7 +9,7 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 beforeEach(() => { window.history.replaceState({}, '', '/'); localStorage.clear(); });
 afterEach(() => { window.history.replaceState({}, '', '/'); localStorage.clear(); });
 function fillSearch() {
-  fireEvent.change(screen.getByLabelText('Miasto startu'), { target: { value: criteria.origin } });
+  fireEvent.change(screen.getByLabelText('Miejsce startu'), { target: { value: criteria.origin } });
   fireEvent.change(screen.getByLabelText('Cel podróży'), { target: { value: criteria.destination } });
   fireEvent.change(screen.getByLabelText('Data wyjazdu'), { target: { value: criteria.departureDate } });
   fireEvent.change(screen.getByLabelText('Data powrotu'), { target: { value: criteria.returnDate } });
@@ -34,9 +34,9 @@ describe('wyszukiwanie i planowanie z API', () => {
   it('waliduje pola i daty, ustawia komunikaty przy polach i fokus bez wywołania API', () => {
     const fetch = vi.fn(); vi.stubGlobal('fetch', fetch); render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /Znajdź połączenia/ }));
-    expect(screen.getByText('Wpisz miasto startu.')).toBeInTheDocument();
-    expect(screen.getByLabelText('Miasto startu')).toHaveAttribute('aria-invalid', 'true');
-    expect(screen.getByLabelText('Miasto startu')).toHaveFocus();
+    expect(screen.getByText('Wpisz miejsce startu.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Miejsce startu')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText('Miejsce startu')).toHaveFocus();
     fillSearch(); fireEvent.change(screen.getByLabelText('Data powrotu'), { target: { value: '2099-12-04' } });
     fireEvent.click(screen.getByRole('button', { name: /Znajdź połączenia/ }));
     expect(screen.getByText('Powrót nie może poprzedzać wyjazdu.')).toBeInTheDocument(); expect(fetch).not.toHaveBeenCalled();

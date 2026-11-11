@@ -63,7 +63,12 @@ Wynik: `searchId`, `criteria` (żądanie), `status`, `roundTripOptions[]`,
 Puste `roundTripOptions` samo nie potwierdza braku połączeń. Nieznana cena
 nie oznacza braku kursu. Awaria źródła nie może zmienić się w `NO_CONNECTION`.
 Każdy odczyt `sources[]`: `sourceId`, `url`, `checkedAt`,
-`status: OK | NO_CONNECTION | PROVIDER_ERROR`, `message` (string lub null).
+`status: OK | NO_CONNECTION | NO_COVERAGE | PROVIDER_ERROR`, `message` (string lub null).
+Opcjonalny `reasonCode` rozróżnia `UNSUPPORTED_ROUTE`, `OUTSIDE_COVERAGE`,
+`UPSTREAM_FAILURE` i `NOT_CONFIGURED`. `NO_COVERAGE` oznacza brak pokrycia
+trasy lub daty przez źródło, a nie potwierdzony brak kursów.
+`UNRECOGNIZED_PUBLICATION` oznacza, że zmieniona treść publikacji nie
+pozwoliła bezpiecznie odczytać wymaganych danych.
 Brak obsługi trasy zgłaszamy jako brak danych z uzasadnieniem, nie jako brak kursów.
 
 Wariant w obie strony: `id`, `outbound`, `returnJourney`, `travelMinutes`,
@@ -89,7 +94,8 @@ Dane testowe pojedynczej ceny:
   "sourceId": "test-provider",
   "sourceUrl": "https://example.com/test-fare",
   "checkedAt": "2026-11-11T10:00:00Z",
-  "testData": true
+  "testData": true,
+  "basis": "TEST_DATA"
 }
 ```
 
@@ -99,6 +105,14 @@ i `reason` z wyjaśnieniem; gdy nie było odczytu, `checkedAt` może być null.
 `UNKNOWN` to niepotwierdzona cena przy znanej ofercie; `PROVIDER_ERROR` to
 nieudany odczyt dostawcy. Ulgowa cena wymaga warunków `eligibility`
 potwierdzonych w źródle; nie wyliczamy ulgi samodzielnie.
+
+`basis` określa rodzaj ceny: `LIVE_OFFER` (oferta wyceniona dla konkretnego
+terminu), `PUBLISHED_TARIFF` (aktualnie odczytany publikowany cennik, bez
+potwierdzenia konkretnej rezerwacji) albo `TEST_DATA` (jawny przykład testowy).
+Starszy zapis lub nieznana cena może mieć `basis: null` albo brak tego pola.
+Frontend rozróżnia cennik od oferty i nie nadaje brakującemu polu znaczenia
+`LIVE_OFFER`. `checkedAt` jest czasem rzeczywistego odczytu, nie datą
+ponownego wyświetlenia wcześniej zapisanej ceny.
 
 `costSummary`: `total` (string lub null), `currency`, `fareType`, `complete`
 (boolean), `missingComponents[]` (identyfikatory brakujących składników).
@@ -192,12 +206,38 @@ wyłącznie po stronie backendu; żadnych sekretów w zmiennych `VITE_*`.
 
 ## Rozdzielenie danych rzeczywistych i testowych
 
-Domyślny tryb nie generuje ofert zastępujących brakujące integracje. Brak
-skonfigurowanych źródeł oznacza `PROVIDER_ERROR` z czytelnym opisem i pustymi
-wynikami, nigdy potwierdzony brak kursów. Jawne `APP_DATA_MODE=demo` uruchamia
+Domyślny tryb odczytuje zatwierdzone źródła lokalne Gdańska; nie generuje
+ofert zastępujących brakujące integracje. Brak pokrycia albo niedostępność
+źródła mają jawny opis w `sources`. Przy użytecznych częściowych danych
+wynik ma `PARTIAL`; jeśli niczego nie udało się ustalić — `PROVIDER_ERROR`.
+Żaden z tych przypadków nie jest potwierdzonym brakiem kursów.
+Jawne `APP_DATA_MODE=demo` uruchamia
 kontrolowanego dostawcę testowego do weryfikacji logiki i widoków. Każdy taki wynik
 i zapisany na jego podstawie plan ma `testData: true`; frontend wyraźnie to
 oznacza. Nie są to rzeczywiste ceny ani rozkłady dla wskazanych dat.
 
 Publiczne linki mają postać `${APP_FRONTEND_BASE_URL}/shared/{shareToken}`;
 domyślne `APP_FRONTEND_BASE_URL` to `http://localhost:5173`.
+
+## Zakres zatwierdzonego etapu SOL-119
+
+Właściciel zatwierdził podłączenie potwierdzonych źródeł: linii 100
+w Gdańsku między przystankami Dworzec Główny i Targ Rybny, w zakresie dat
+publikowanym przez API, oraz dostępnych oficjalnych cenników atrakcji.
+Kolejne platformy o tej samej nazwie mogą mieć różne identyfikatory;
+połączenie powrotne nie musi używać tego samego ID przystanku co wyjazd.
+
+Rozkład dla dnia pochodzi z pola `date`, a nie eksportowej daty 1899
+w polach godzin. Źródło taryfy jest odrębne od źródła rozkładu. Niedostępny
+cennik lub warunki ulgi pozostają nieznane; 403 nie jest zastępowane ceną
+zapisaną wcześniej w kodzie. Niepotwierdzony czas dojścia do atrakcji
+daje `MISSING_DATA`, a nie wymyślony czas przejazdu.
+
+Wynik może ograniczać liczbę pokazanych wariantów do 24, **po** porównaniu
+wszystkich znalezionych par według wybranego priorytetu. Ograniczenie jest
+jawnie opisane w odpowiedzi źródła.
+
+To etap pośredni. Zakres kolei, samolotów, autokarów, promów, pozostałych
+tras i dostawców cen **wymaga doprecyzowania w dalszym etapie projektu**.
+Nie jest to deklaracja obsługi wszystkich środków transportu ani
+porównania rzeczywistych cen podróży Warszawa–Gdańsk.

@@ -36,6 +36,7 @@ h1 em { font-family: Georgia, "Times New Roman", serif; color: #ac5236; font-wei
 .section-heading .eyebrow { margin: 0; }
 .small-note,.muted { color: #667265; font-size: 12px; line-height: 1.75; }
 .small-note { text-align: right; }
+.coverage-note { color: #526a58; background: #edf2e4; border-radius: 9px; padding: 12px 14px; margin: 0 0 22px; font-size: 12px; }
 .unframed { border: 0; padding: 0; margin: 0; min-width: 0; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr .8fr .8fr; gap: 16px; }
 .field label { margin-bottom: 8px; }

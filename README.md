@@ -9,16 +9,36 @@ czterech priorytetów, przeliczanie harmonogramu i zapis planu. Frontend
 React / TypeScript / Vite pozwala wybrać podróż, edytować atrakcje, zobaczyć
 konflikty po zmianie powrotu oraz udostępnić zapisany plan do odczytu.
 
-Integracje rzeczywistych ofert są osobnym etapem SOL-119. **Domyślnie źródła
-ofert nie są skonfigurowane**: wyszukiwanie jawnie zgłasza ich niedostępność,
-bez wymyślonych cen i bez sugerowania, że brak danych oznacza brak kursów.
-Pełny przepływ można sprawdzić w jawnym trybie danych testowych opisanym niżej.
+Domyślny tryb `live` odczytuje rzeczywisty rozkład linii 100 w Gdańsku
+oraz dostępne oficjalne cenniki atrakcji. **Taryfa publikowana nie jest ofertą
+wycenioną dla konkretnej rezerwacji.** Każda cena pokazuje źródło i czas
+odczytu; niedostępne dane nie są zastępowane wymyślonymi wartościami.
+Pełny scenariusz reguł planera można też sprawdzić w jawnym trybie danych
+testowych opisanym niżej.
 
 Wspólny [kontrakt REST](docs/api-contract.md) opisuje wyszukiwanie, cztery
 priorytety, ceny i źródła, harmonogram, CRUD oraz odrębny publiczny odczyt.
 Weryfikację dostępu do źródeł, pokrycie dat i ograniczenia opisuje
 [raport SOL-115](docs/data-sources.md). Nie potwierdzamy dostępności konkretnego
 kursu lub biletu na podstawie samego opublikowanego cennika.
+
+## Zatwierdzony etap i dalsze doprecyzowanie
+
+Właściciel zatwierdził pierwszy etap SOL-119: **Dworzec Główny ↔ Targ Rybny
+w Gdańsku, linia 100**, wyłącznie w datach opublikowanych przez ZTM,
+oraz dostępne oficjalne cenniki atrakcji. To lokalny odcinek w mieście,
+nie połączenie Warszawa–Gdańsk. Przystanki po obu stronach Dworca mogą mieć
+różne identyfikatory; adapter sprawdza rzeczywistą kolejność i godziny kursu.
+
+**Zakres kolei, samolotów, autokarów, promów, pozostałych tras oraz dostawców
+cen wymaga doprecyzowania w dalszym etapie projektu.** Ten etap nie oznacza
+pełnego pokrycia wszystkich środków transportu. Nie zakładano kont,
+nie kupowano dostępu i nie deklarujemy działania niezweryfikowanych API.
+
+Rozkład i taryfa są odrębnymi źródłami. Błąd jednego cennika zachowuje dane
+pozostałych źródeł. Brak pokrycia daty lub trasy nie oznacza braku kursów.
+Jeśli nie potwierdzono godzin otwarcia, warunków ulgi lub czasu dojścia,
+aplikacja pokazuje ten brak zamiast przyjmować dostępność lub zerowy dojazd.
 
 ## Wymagania
 
@@ -68,6 +88,13 @@ powoduje czytelny błąd na stronie i pozwala ponowić sprawdzenie.
 
 ## Pełny przebieg na danych testowych
 
+Przed trybem testowym możesz sprawdzić dane rzeczywiste bez dodatkowych
+kluczy: uruchom domyślny backend i frontend, wpisz **Dworzec Główny** oraz
+**Targ Rybny**, a następnie wybierz daty z opublikowanego zakresu ZTM.
+Zakres może się zmieniać; odpowiedź API podaje brak pokrycia dla zbyt
+odległej daty. Lista pokazuje do 24 wariantów po porównaniu wszystkich
+znalezionych par według wybranego priorytetu. Nie jest pełnym spisem kursów.
+
 W terminalu backendu, zamiast domyślnego polecenia uruchomienia:
 
 ```bash
@@ -108,6 +135,7 @@ Domyślne ustawienia wystarczają do startu. Szablony:
 | `APP_CORS_ALLOWED_ORIGINS` | `http://localhost:5173` | backend; lista po przecinku |
 | `APP_FRONTEND_BASE_URL` | `http://localhost:5173` | backend; baza linków do odczytu |
 | `APP_DATA_MODE` | `live` | backend; `demo` włącza jawne przykłady testowe |
+| `APP_SOURCE_TIMEOUT_SECONDS` | `3` | backend; limit odczytu źródła, zakres 1–5 s |
 | `VITE_API_BASE_URL` | `http://localhost:8080/api/v1` | frontend; adres publiczny |
 
 Spring Boot nie wczytuje automatycznie `.env`. Dla własnej konfiguracji
@@ -125,8 +153,10 @@ set +a
 
 W frontendzie `cp .env.example .env.local`; Vite wczyta ten plik po ponownym
 uruchomieniu. Nigdy nie dodawaj sekretów do `VITE_*` — trafiają do przeglądarki.
-Nie ma jeszcze skonfigurowanych dostawców danych ani wymaganych kluczy API.
-Klucze i nazwy zmiennych dostawców dodamy po weryfikacji źródeł w SOL-115/119.
+Zatwierdzone źródła lokalne nie wymagają kluczy API. Dane pobiera serwer,
+z ograniczeniem czasu i rozmiaru odpowiedzi. Nazwy zmiennych i zasady
+dostępu przyszłych dostawców ustalimy po doprecyzowaniu kolejnego etapu;
+żadnych kluczy dostawców nie przekazujemy do przeglądarki.
 
 ## Testy i budowanie
 
