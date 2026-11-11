@@ -1,0 +1,190 @@
+{
+  "testData": false,
+  "purpose": "Real anonymous verification evidence; not a simulated offer and not proof of application integration.",
+  "sourceId": "ztm-gdansk",
+  "scheduleRequest": {
+    "url": "https://ckan2.multimediagdansk.pl/stopTimes?date=2026-11-14&routeId=100",
+    "checkedAt": "2026-11-11T08:19:27Z",
+    "httpStatus": 200,
+    "sha256": "4338a44aa55ad1de0085b1b69ee74945297a45da19fa36cff41d9a24062d428c",
+    "responseBytes": 140808
+  },
+  "sourceLastUpdate": "2026-11-11 02:41:13",
+  "routeName": "Dworzec Główny - Targ Rybny",
+  "responseExcerpt": [
+    {
+      "routeId": 100,
+      "tripId": 11,
+      "agencyId": 1,
+      "variantId": 842194,
+      "busServiceName": "100-01",
+      "order": 1,
+      "stopSequence": 1,
+      "stopId": 1015,
+      "date": "2026-11-14",
+      "arrivalTime": "1899-12-30T10:36:00",
+      "departureTime": "1899-12-30T10:36:00",
+      "passenger": true,
+      "nonpassenger": 0,
+      "stopName": "Dworzec Główny"
+    },
+    {
+      "routeId": 100,
+      "tripId": 11,
+      "agencyId": 1,
+      "variantId": 842194,
+      "busServiceName": "100-01",
+      "order": 1,
+      "stopSequence": 2,
+      "stopId": 1026,
+      "date": "2026-11-14",
+      "arrivalTime": "1899-12-30T10:39:00",
+      "departureTime": "1899-12-30T10:39:00",
+      "passenger": true,
+      "nonpassenger": 0,
+      "stopName": "Hucisko"
+    },
+    {
+      "routeId": 100,
+      "tripId": 11,
+      "agencyId": 1,
+      "variantId": 842194,
+      "busServiceName": "100-01",
+      "order": 1,
+      "stopSequence": 3,
+      "stopId": 1832,
+      "date": "2026-11-14",
+      "arrivalTime": "1899-12-30T10:41:00",
+      "departureTime": "1899-12-30T10:41:00",
+      "passenger": true,
+      "nonpassenger": 0,
+      "stopName": "Targ Drzewny"
+    },
+    {
+      "routeId": 100,
+      "tripId": 11,
+      "agencyId": 1,
+      "variantId": 842194,
+      "busServiceName": "100-01",
+      "order": 1,
+      "stopSequence": 4,
+      "stopId": 1834,
+      "date": "2026-11-14",
+      "arrivalTime": "1899-12-30T10:42:00",
+      "departureTime": "1899-12-30T10:42:00",
+      "passenger": true,
+      "nonpassenger": 0,
+      "stopName": "Targ Chlebowy"
+    },
+    {
+      "routeId": 100,
+      "tripId": 11,
+      "agencyId": 1,
+      "variantId": 842194,
+      "busServiceName": "100-01",
+      "order": 1,
+      "stopSequence": 5,
+      "stopId": 1835,
+      "date": "2026-11-14",
+      "arrivalTime": "1899-12-30T10:43:00",
+      "departureTime": "1899-12-30T10:43:00",
+      "passenger": true,
+      "nonpassenger": 0,
+      "stopName": "Żuraw"
+    },
+    {
+      "routeId": 100,
+      "tripId": 11,
+      "agencyId": 1,
+      "variantId": 842194,
+      "busServiceName": "100-01",
+      "order": 1,
+      "stopSequence": 6,
+      "stopId": 100,
+      "date": "2026-11-14",
+      "arrivalTime": "1899-12-30T10:44:00",
+      "departureTime": "1899-12-30T10:44:00",
+      "passenger": true,
+      "nonpassenger": 0,
+      "stopName": "Targ Rybny"
+    }
+  ],
+  "excerptTransformation": "Selected one passenger service (routeId100,tripId11,order1); added stopName by joining stopId against official stops.json for2026-11-14. No prices were returned.",
+  "publishedDateRange": {
+    "request": {
+      "url": "https://ckan.multimediagdansk.pl/dataset/c24aa637-3619-4dc2-a171-a23eec8f2172/resource/9c3d6fed-5394-4ef1-b2c6-c8716999149c/download/stoptimesspan.json",
+      "checkedAt": "2026-11-11T08:19:27Z",
+      "httpStatus": 200,
+      "sha256": "8d3e8b3b89c46613c6f81c452ba79f1235ba77c2736af6d57d813cf04928d3e5",
+      "responseBytes": 687
+    },
+    "response": {
+      "lastUpdate": "2026-11-11 02:37:57",
+      "stopTimesSpans": [
+        {
+          "agencyId": 1,
+          "startDate": "2026-11-11",
+          "endDate": "2026-11-23"
+        },
+        {
+          "agencyId": 17,
+          "startDate": "2026-11-11",
+          "endDate": "2026-11-22"
+        },
+        {
+          "agencyId": 2,
+          "startDate": "2026-11-11",
+          "endDate": "2026-11-23"
+        },
+        {
+          "agencyId": 4,
+          "startDate": "2026-11-11",
+          "endDate": "2026-11-23"
+        },
+        {
+          "agencyId": 20,
+          "startDate": "2026-11-11",
+          "endDate": "2026-11-23"
+        },
+        {
+          "agencyId": 5,
+          "startDate": "2026-11-11",
+          "endDate": "2026-11-22"
+        },
+        {
+          "agencyId": 6,
+          "startDate": "2026-11-11",
+          "endDate": "2026-11-22"
+        },
+        {
+          "agencyId": 7,
+          "startDate": "2026-11-11",
+          "endDate": "2026-11-22"
+        },
+        {
+          "agencyId": 8,
+          "startDate": "2026-11-11",
+          "endDate": "2026-11-22"
+        },
+        {
+          "agencyId": 9,
+          "startDate": "2026-11-11",
+          "endDate": "2026-11-22"
+        }
+      ]
+    }
+  },
+  "outsidePublishedDateRange": {
+    "request": {
+      "url": "https://ckan2.multimediagdansk.pl/stopTimes?date=2026-12-05&routeId=100",
+      "checkedAt": "2026-11-11T08:19:28Z",
+      "httpStatus": 404,
+      "sha256": "c14d8af0d118dbac94126fe5ae1756d6ecb319768d128294b5a9e052dbce0f14",
+      "responseBytes": 80
+    },
+    "interpretation": "Coverage unavailable; HTTP404 is not a verified NO_CONNECTION result."
+  },
+  "timeInterpretation": "1899-12-30 is an exported time-of-day sentinel. Combine with each record date in Europe/Warsaw, respecting any after-midnight rollover; never display1899 as journey date.",
+  "prices": null,
+  "bookingUrl": null
+}
