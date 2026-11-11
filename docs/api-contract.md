@@ -2,7 +2,7 @@
 
 Wspólna baza dla SOL-116–119. Zmiany uzgadnia koordynator przed zmianą klientów
 i serwera. `GET /api/v1/health` pochodzi z SOL-114; wyszukiwanie, przeliczanie
-i zapis planów powstają w SOL-116–118, a rzeczywiste integracje w SOL-119.
+i zapis planów wdrożono w SOL-116–118. Rzeczywiste integracje pozostają w SOL-119.
 
 ## Konwencje i stan aplikacji
 

@@ -2,17 +2,23 @@
 
 Planer krótkich wyjazdów, który łączy wybór transportu ze zwiedzaniem. Po zmianie godziny powrotu ma wskazywać, które atrakcje przestają mieścić się w planie.
 
-## Zakres SOL-114
+## Aktualny zakres
 
-Uruchamialny szkielet: backend Java / Spring Boot / SQLite oraz frontend
-React / TypeScript / Vite. Strona startowa odczytuje `/api/v1/health`
-bezpośrednio z backendu i pokazuje stan rzeczywistego połączenia z bazą.
-Nie ma jeszcze wyszukiwania ofert, edytora ani zapisu planów. Nie podajemy
-przykładowych cen jako rzeczywistych danych.
+Backend Java / Spring Boot / SQLite udostępnia wyszukiwanie, porównywanie
+czterech priorytetów, przeliczanie harmonogramu i zapis planu. Frontend
+React / TypeScript / Vite pozwala wybrać podróż, edytować atrakcje, zobaczyć
+konflikty po zmianie powrotu oraz udostępnić zapisany plan do odczytu.
+
+Integracje rzeczywistych ofert są osobnym etapem SOL-119. **Domyślnie źródła
+ofert nie są skonfigurowane**: wyszukiwanie jawnie zgłasza ich niedostępność,
+bez wymyślonych cen i bez sugerowania, że brak danych oznacza brak kursów.
+Pełny przepływ można sprawdzić w jawnym trybie danych testowych opisanym niżej.
 
 Wspólny [kontrakt REST](docs/api-contract.md) opisuje wyszukiwanie, cztery
 priorytety, ceny i źródła, harmonogram, CRUD oraz odrębny publiczny odczyt.
-Poza health endpointy są planowane w SOL-116–119.
+Weryfikację dostępu do źródeł, pokrycie dat i ograniczenia opisuje
+[raport SOL-115](docs/data-sources.md). Nie potwierdzamy dostępności konkretnego
+kursu lub biletu na podstawie samego opublikowanego cennika.
 
 ## Wymagania
 
@@ -35,7 +41,8 @@ cd backend
 
 Backend: `http://127.0.0.1:8080`. SQLite automatycznie tworzy lokalny plik
 `backend/city-break-planner.db`, ignorowany przez Git. Plik zachowuje się
-między uruchomieniami; tabele planów będą dodane w SOL-116.
+między uruchomieniami; zapis planów tworzy wymagany schemat przy pierwszej
+operacji na repozytorium planów.
 
 W drugim terminalu:
 
@@ -45,7 +52,7 @@ npm ci
 npm run dev
 ```
 
-Otwórz **http://localhost:5173**. Strona pokaże wynik połączenia z API i SQLite.
+Otwórz **http://localhost:5173**. Wyszukiwanie wymaga działającego backendu.
 Vite ma stały port: gdy 5173 jest zajęty, zwolnij port zamiast zmieniać origin
 bez dostosowania CORS. `localhost` i `127.0.0.1` to różne originy.
 
@@ -59,6 +66,34 @@ Oczekiwane HTTP 200 i `{"status":"UP","database":"UP"}`. Awaria bazy daje
 HTTP 503 i `{"status":"DOWN","database":"DOWN"}`. Wyłączony backend
 powoduje czytelny błąd na stronie i pozwala ponowić sprawdzenie.
 
+## Pełny przebieg na danych testowych
+
+W terminalu backendu, zamiast domyślnego polecenia uruchomienia:
+
+```bash
+cd backend
+APP_DATA_MODE=demo ./mvnw spring-boot:run
+```
+
+Frontend uruchom bez zmian. Tryb `demo` zwraca **wyłącznie fikcyjne, kontrolowane
+przykłady**. Są oznaczone `testData: true` przez API i komunikatem w interfejsie.
+Pokazane ceny i godziny nie stanowią rzeczywistych ofert, także po zapisie
+i udostępnieniu planu. Nie używaj ich do zakupu lub planowania faktycznej podróży.
+
+1. Podaj start, cel i przyszłe daty, wybierz jeden priorytet i wyszukaj.
+2. Porównaj warianty, rozwiń etapy podróży i wybierz połączenie.
+3. Dodawaj i usuwaj atrakcje oraz zmieniaj ich kolejność. Harmonogram oblicza API.
+4. Wybierz wcześniejszy powrót. Punkty pozostają w planie, a przy kolizjach
+   pojawiają się powody, uwzględniające dojazd i godziny otwarcia.
+5. Zapisz plan i skopiuj link do odczytu. Otwórz go w osobnej sesji przeglądarki:
+   odbiorca widzi plan bez kontrolek edycji.
+
+Token edycji jest zapamiętywany lokalnie przez przeglądarkę dla danego planu.
+Link do odczytu go nie zawiera. Wyczyszczenie danych przeglądarki oznacza
+utratę lokalnego prawa edycji; nie ma jeszcze kont ani odzyskiwania tokenu.
+Publiczny link pozostaje aktywny do usunięcia planu. Zapisane plany można
+odczytać po ponownym uruchomieniu backendu z tym samym plikiem SQLite.
+
 ## Konfiguracja
 
 Domyślne ustawienia wystarczają do startu. Szablony:
@@ -71,6 +106,8 @@ Domyślne ustawienia wystarczają do startu. Szablony:
 | `SERVER_PORT` | `8080` | backend |
 | `SPRING_DATASOURCE_URL` | `jdbc:sqlite:./city-break-planner.db` | backend |
 | `APP_CORS_ALLOWED_ORIGINS` | `http://localhost:5173` | backend; lista po przecinku |
+| `APP_FRONTEND_BASE_URL` | `http://localhost:5173` | backend; baza linków do odczytu |
+| `APP_DATA_MODE` | `live` | backend; `demo` włącza jawne przykłady testowe |
 | `VITE_API_BASE_URL` | `http://localhost:8080/api/v1` | frontend; adres publiczny |
 
 Spring Boot nie wczytuje automatycznie `.env`. Dla własnej konfiguracji
@@ -109,10 +146,16 @@ npm test
 npm run build
 ```
 
-Testy backendu sprawdzają SQLite, health i CORS. Testy frontendu sprawdzają
-odczyt API oraz stany komunikacji; build sprawdza TypeScript i tworzy `dist/`.
+Testy backendu sprawdzają SQLite, health i CORS, pełny CRUD i uprawnienia,
+priorytety oraz konflikty harmonogramu. Testy frontendu używają kontrolowanych
+odpowiedzi API do sprawdzenia wyszukiwania, edytora i widoku publicznego.
+Build sprawdza TypeScript i tworzy `dist/`.
 Backend i Vite muszą działać jednocześnie, aby ręcznie sprawdzić pełne połączenie.
 W Windows użyj `mvnw.cmd` zamiast `./mvnw`; eksport zmiennych dostosuj do powłoki.
+
+Aktualne wyniki, kroki powtórzenia i granice sprawdzenia opisuje
+[raport weryfikacji SOL-115–118](docs/verification.md). Weryfikacja przepływu
+na danych testowych nie zastępuje odbioru rzeczywistych integracji w SOL-120.
 
 ## Organizacja dalszej pracy
 
@@ -120,10 +163,15 @@ W Windows użyj `mvnw.cmd` zamiast `./mvnw`; eksport zmiennych dostosuj do powł
 `frontend/` za widoki i komunikację z API; `docs/api-contract.md` jest wspólną
 umową. Koordynator uzgadnia jej zmiany przed równoległą implementacją.
 
-SOL-115 weryfikuje źródła na konkretnych trasach i datach. SOL-116 wdraża
+SOL-115 weryfikuje źródła na konkretnych trasach i datach. SOL-116 obejmuje
 zapis i uprawnienia, SOL-117 planowanie, SOL-118 widoki, SOL-119 integracje.
 Dalsze niezależne prace zaczynaj z tej samej aktualnej gałęzi bazowej,
 w osobnych worktrees. Nie uznawaj braku ceny albo awarii dostawcy za
 potwierdzony brak połączenia. Zakres obsługiwanych tras zatwierdza właściciel.
+
+Przy implementacji wykorzystano Codexa do koordynacji zadań z Linear,
+pracy agentów nad backendem, frontendem i weryfikacją źródeł, a także testów
+i niezależnej recenzji. Instrukcje projektowe oraz kontrakt są wersjonowane
+w repozytorium; decyzje o zasięgu produktu i źródłach należą do właściciela.
 
 Instrukcje dla agentów są w [AGENTS.md](AGENTS.md), [backend/AGENTS.md](backend/AGENTS.md) i [frontend/AGENTS.md](frontend/AGENTS.md).
