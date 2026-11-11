@@ -98,13 +98,28 @@ function Planner({ ownerId, onSaved }: { ownerId: string | null; onSaved: (id: s
     try {
       const response = await searchTrips(input);
       if (!mounted.current) return;
-      setResult(response); setCriteria(response.criteria);
-      if (!response.roundTripOptions.length) { setPlan(null); setSaved(null); setDirty(false); return; }
+      if (!response.roundTripOptions.length) {
+        if (plan) {
+          const reason = response.status === 'NO_CONNECTION'
+            ? 'Źródła potwierdziły brak kursów dla nowych kryteriów.'
+            : response.status === 'PROVIDER_ERROR'
+              ? 'Nie udało się sprawdzić połączeń dla nowych kryteriów.'
+              : 'Nie otrzymano wariantów dla nowych kryteriów; nie potwierdza to braku kursów.';
+          const details = response.sources.map((source) => source.message).filter(Boolean).join(' ');
+          setError(`${reason} Poprzedni plan, wybrane punkty i uprawnienia zostały zachowane. Nie zmieniono jego terminu.${details ? ` ${details}` : ''}`);
+          return;
+        }
+        setResult(response); setCriteria(response.criteria);
+        setPlan(null); setSaved(null); setDirty(false); return;
+      }
       const sameRoute = plan && plan.criteria.origin === input.origin && plan.criteria.destination === input.destination;
       const first = response.roundTripOptions[0];
       const items = sameRoute ? itemsFromPlan(plan) : recommendationInputs(first, response.attractions);
+      const preview = await previewPlan({ criteria: response.criteria, selectedRoundTrip: first, items });
+      if (!mounted.current) return;
+      setResult(response); setCriteria(response.criteria);
+      setPlan(preview); setDirty(true);
       if (!sameRoute) setSaved(null);
-      await calculate(response.criteria, first, items);
     } catch (err) { handleError(err); } finally { if (mounted.current) setBusy(''); }
   }
   function recommendationInputs(trip: RoundTrip, attractions: Attraction[]): ItemInput[] {

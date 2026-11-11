@@ -105,6 +105,61 @@ describe('wyszukiwanie i planowanie z API', () => {
     expect(screen.getByRole('button', { name: /Zapisz zmiany/ })).toBeDisabled();
   });
 
+  it('nieudany podgląd nowej trasy zachowuje zapisany plan i aktualizuje go zamiast tworzyć kopię', async () => {
+    const { fetch } = mockApi();
+    const originalApi = fetch.getMockImplementation()!;
+    fetch.mockImplementation(async (url: string, options: RequestInit = {}) => {
+      if (url.endsWith('/searches') && JSON.parse(String(options.body)).destination === 'Kraków')
+        return json({ ...result, criteria: { ...criteria, destination: 'Kraków' }, attractions: [] });
+      if (url.endsWith('/plans/preview') && JSON.parse(String(options.body)).criteria.destination === 'Kraków')
+        return json({ detail: 'Źródło podglądu jest niedostępne.' }, 503);
+      return originalApi(url, options);
+    });
+    localStorage.setItem('city-break-owner:saved-test', 'private-test-owner-token');
+    window.history.replaceState({}, '', '/plans/saved-test');
+    render(<App />);
+    await screen.findByRole('heading', { name: 'Twój plan zwiedzania' });
+    await waitFor(() => expect(screen.getByRole('button', { name: /Znajdź połączenia/ })).toBeEnabled());
+
+    fireEvent.change(screen.getByLabelText('Cel podróży'), { target: { value: 'Kraków' } });
+    fireEvent.click(screen.getByRole('button', { name: /Znajdź połączenia/ }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Źródło podglądu jest niedostępne.');
+    expect(screen.getByLabelText('Link tylko do odczytu')).toHaveValue(savedPlan.shareUrl);
+    expect(screen.getByRole('button', { name: 'Usuń zapisany plan' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Warszawa → Gdańsk' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Wybierz połączenie' }));
+    await screen.findByText('Nie zdążysz na wcześniejszy powrót po tej wizycie.');
+    await waitFor(() => expect(screen.getByRole('button', { name: /Zapisz zmiany/ })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: /Zapisz zmiany/ }));
+    await waitFor(() => expect(fetch.mock.calls.some(([url, options]) => url.endsWith('/plans/saved-test') && options?.method === 'PUT')).toBe(true));
+    expect(fetch.mock.calls.some(([url, options]) => url.endsWith('/plans') && options?.method === 'POST')).toBe(false);
+  });
+
+  it.each(['NO_CONNECTION', 'PROVIDER_ERROR'])('zmiana powrotu bez wariantów (%s) nie usuwa wybranych punktów ani zapisu', async (status) => {
+    const { fetch, previews } = mockApi();
+    const originalApi = fetch.getMockImplementation()!;
+    fetch.mockImplementation(async (url: string, options: RequestInit = {}) => {
+      if (url.endsWith('/searches') && JSON.parse(String(options.body)).returnDate === '2099-12-07')
+        return json({ ...result, criteria: { ...criteria, returnDate: '2099-12-07' }, status, roundTripOptions: [], attractions: [] });
+      return originalApi(url, options);
+    });
+    localStorage.setItem('city-break-owner:saved-test', 'private-test-owner-token');
+    window.history.replaceState({}, '', '/plans/saved-test');
+    render(<App />);
+    await screen.findByRole('heading', { name: 'Twój plan zwiedzania' });
+    await waitFor(() => expect(screen.getByRole('button', { name: /Znajdź połączenia/ })).toBeEnabled());
+
+    fireEvent.change(screen.getByLabelText('Data powrotu'), { target: { value: '2099-12-07' } });
+    fireEvent.click(screen.getByRole('button', { name: /Znajdź połączenia/ }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Poprzedni plan, wybrane punkty i uprawnienia zostały zachowane.');
+    expect(screen.getByRole('button', { name: 'Usuń Muzeum testowe' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Usuń zapisany plan' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Link tylko do odczytu')).toHaveValue(savedPlan.shareUrl);
+    expect(screen.getByRole('heading', { name: 'Warszawa → Gdańsk' })).toBeInTheDocument();
+    expect(previews).toHaveLength(0);
+  });
+
   it('po utracie połączenia zachowuje czytelny błąd i pozwala ponowić wyszukiwanie', async () => {
     const fetch = vi.fn().mockRejectedValueOnce(new TypeError('offline')).mockResolvedValueOnce(json({ ...result, status: 'NO_CONNECTION', roundTripOptions: [] }));
     vi.stubGlobal('fetch', fetch); render(<App />); fillSearch();
