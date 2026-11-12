@@ -1,0 +1,423 @@
+{
+  "checkedAt": "2026-11-12T07:50:05.138Z",
+  "dataMode": "live",
+  "criteria": {
+    "origin": "Dworzec Główny",
+    "destination": "Targ Rybny",
+    "departureDate": "2026-11-14",
+    "returnDate": "2026-11-14",
+    "priority": "LOWEST_TOTAL_COST",
+    "currency": "PLN",
+    "fareType": "STANDARD"
+  },
+  "status": "PARTIAL",
+  "optionCount": 24,
+  "sources": [
+    {
+      "sourceId": "ecs-permanent-tariff",
+      "url": "https://bilety.ecs.gda.pl/index/cennik.html",
+      "checkedAt": "2026-11-12T07:49:34.379721653Z",
+      "status": "OK",
+      "message": "Taryfa publikowana, nie wycena konkretnego kursu ani rezerwacja na wybrany dzień."
+    },
+    {
+      "sourceId": "ecs-permanent-hours",
+      "url": "https://ecs.gda.pl/zaplanuj-wizyte/godziny-otwarcia/",
+      "checkedAt": "2026-11-12T07:49:35.294134192Z",
+      "status": "OK",
+      "message": "Godziny z publikacji instytucji, bez potwierdzenia puli biletów. Czas wizyty (120 min) jest parametrem planera, nie pomiarem instytucji. Nie potwierdzono czasu dojścia."
+    },
+    {
+      "sourceId": "museum-ww2-main-tariff",
+      "url": "https://www.muzeum1939.pl/wizyta/wizyta-miiws/bilety-i-cennik",
+      "checkedAt": "2026-11-12T07:49:34.608315921Z",
+      "status": "NO_COVERAGE",
+      "message": "Nie rozpoznano wymaganych danych w publikacji. Nie zastępujemy ich statycznym cennikiem ani godzinami.",
+      "reasonCode": "UNRECOGNIZED_PUBLICATION"
+    },
+    {
+      "sourceId": "museum-ww2-main-hours",
+      "url": "https://www.muzeum1939.pl/wizyta/wizyta-miiws/godziny-otwarcia",
+      "checkedAt": "2026-11-12T07:49:34.609512416Z",
+      "status": "OK",
+      "message": "Godziny z publikacji instytucji, bez potwierdzenia puli biletów. Czas wizyty (150 min) jest parametrem planera, nie pomiarem instytucji. Nie potwierdzono czasu dojścia."
+    },
+    {
+      "sourceId": "ztm-date-coverage",
+      "url": "https://ckan.multimediagdansk.pl/dataset/c24aa637-3619-4dc2-a171-a23eec8f2172/resource/9c3d6fed-5394-4ef1-b2c6-c8716999149c/download/stoptimesspan.json",
+      "checkedAt": "2026-11-12T07:49:34.347401533Z",
+      "status": "OK",
+      "message": "Odczytano publiczne źródło podczas wyszukiwania."
+    },
+    {
+      "sourceId": "ztm-published-tariff",
+      "url": "https://ztm.gda.pl/bilety/bilety-jednorazowe,a,3019",
+      "checkedAt": "2026-11-12T07:49:34.899674736Z",
+      "status": "OK",
+      "message": "Taryfa publikowana, nie wycena konkretnego kursu ani rezerwacja na wybrany dzień."
+    },
+    {
+      "sourceId": "ztm-discount-conditions",
+      "url": "https://ztm.gda.pl/bilety/przejazdy-ulgowe,a,9002",
+      "checkedAt": "2026-11-12T07:49:34.899642537Z",
+      "status": "OK",
+      "message": "Warunki ulgi odczytano osobno z oficjalnej publikacji ZTM."
+    },
+    {
+      "sourceId": "ztm-stops-2026-11-14",
+      "url": "https://ckan2.multimediagdansk.pl/stops?date=2026-11-14",
+      "checkedAt": "2026-11-12T07:49:34.611609115Z",
+      "status": "OK",
+      "message": "Odczytano publiczne źródło podczas wyszukiwania."
+    },
+    {
+      "sourceId": "ztm-schedule-2026-11-14",
+      "url": "https://ckan2.multimediagdansk.pl/stopTimes?date=2026-11-14&routeId=100",
+      "checkedAt": "2026-11-12T07:49:34.313641436Z",
+      "status": "OK",
+      "message": "Odczytano publiczne źródło podczas wyszukiwania."
+    },
+    {
+      "sourceId": "ztm-stops-2026-11-14",
+      "url": "https://ckan2.multimediagdansk.pl/stops?date=2026-11-14",
+      "checkedAt": "2026-11-12T07:49:34.611609115Z",
+      "status": "OK",
+      "message": "Odczytano publiczne źródło podczas wyszukiwania."
+    },
+    {
+      "sourceId": "ztm-schedule-2026-11-14",
+      "url": "https://ckan2.multimediagdansk.pl/stopTimes?date=2026-11-14&routeId=100",
+      "checkedAt": "2026-11-12T07:49:34.313641436Z",
+      "status": "OK",
+      "message": "Odczytano publiczne źródło podczas wyszukiwania."
+    },
+    {
+      "sourceId": "result-limit",
+      "url": null,
+      "checkedAt": null,
+      "status": "OK",
+      "message": "Pokazano 24 najwyżej sklasyfikowane warianty spośród 190. Ranking obejmuje wszystkie pobrane warianty."
+    }
+  ],
+  "firstRoundTrip": {
+    "outbound": {
+      "departureAt": "2026-11-14T10:36:00+01:00",
+      "arrivalAt": "2026-11-14T10:44:00+01:00",
+      "segments": [
+        {
+          "id": "ztm100-2026-11-14-100-01-0001-0011-1015-100",
+          "mode": "LOCAL_TRANSIT",
+          "operator": "ZTM Gdańsk — linia 100",
+          "origin": {
+            "name": "Dworzec Główny",
+            "latitude": 54.35524,
+            "longitude": 18.64517
+          },
+          "destination": {
+            "name": "Targ Rybny",
+            "latitude": 54.35358,
+            "longitude": 18.65789
+          },
+          "departureAt": "2026-11-14T10:36:00+01:00",
+          "arrivalAt": "2026-11-14T10:44:00+01:00",
+          "prices": [
+            {
+              "status": "KNOWN",
+              "amount": "4.80",
+              "currency": "PLN",
+              "fareType": "STANDARD",
+              "eligibility": null,
+              "sourceId": "ztm-published-tariff",
+              "sourceUrl": "https://ztm.gda.pl/bilety/bilety-jednorazowe,a,3019",
+              "checkedAt": "2026-11-12T07:49:34.899674736Z",
+              "testData": false,
+              "reason": "Taryfa publikowana, nie wycena konkretnego kursu ani rezerwacja na wybrany dzień.",
+              "basis": "PUBLISHED_TARIFF"
+            },
+            {
+              "status": "KNOWN",
+              "amount": "2.40",
+              "currency": "PLN",
+              "fareType": "REDUCED",
+              "eligibility": "11. studenci szkół wyższych i wyższych szkół zawodowych bez względu na wiek legitymacja studencka",
+              "sourceId": "ztm-published-tariff",
+              "sourceUrl": "https://ztm.gda.pl/bilety/bilety-jednorazowe,a,3019",
+              "checkedAt": "2026-11-12T07:49:34.899674736Z",
+              "testData": false,
+              "reason": "Taryfa publikowana, nie wycena konkretnego kursu ani rezerwacja na wybrany dzień.",
+              "basis": "PUBLISHED_TARIFF"
+            }
+          ],
+          "bookingUrl": "https://ztm.gda.pl/bilety/bilety-jednorazowe,a,3019",
+          "mapUrl": "https://www.google.com/maps/dir/?api=1&origin=54.35524%2C18.64517&destination=54.35358%2C18.65789&travelmode=transit"
+        }
+      ]
+    },
+    "returnJourney": {
+      "departureAt": "2026-11-14T10:45:00+01:00",
+      "arrivalAt": "2026-11-14T10:52:00+01:00",
+      "segments": [
+        {
+          "id": "ztm100-2026-11-14-100-01-0002-0022-100-1023",
+          "mode": "LOCAL_TRANSIT",
+          "operator": "ZTM Gdańsk — linia 100",
+          "origin": {
+            "name": "Targ Rybny",
+            "latitude": 54.35358,
+            "longitude": 18.65789
+          },
+          "destination": {
+            "name": "Dworzec Główny",
+            "latitude": 54.35698,
+            "longitude": 18.64555
+          },
+          "departureAt": "2026-11-14T10:45:00+01:00",
+          "arrivalAt": "2026-11-14T10:52:00+01:00",
+          "prices": [
+            {
+              "status": "KNOWN",
+              "amount": "4.80",
+              "currency": "PLN",
+              "fareType": "STANDARD",
+              "eligibility": null,
+              "sourceId": "ztm-published-tariff",
+              "sourceUrl": "https://ztm.gda.pl/bilety/bilety-jednorazowe,a,3019",
+              "checkedAt": "2026-11-12T07:49:34.899674736Z",
+              "testData": false,
+              "reason": "Taryfa publikowana, nie wycena konkretnego kursu ani rezerwacja na wybrany dzień.",
+              "basis": "PUBLISHED_TARIFF"
+            },
+            {
+              "status": "KNOWN",
+              "amount": "2.40",
+              "currency": "PLN",
+              "fareType": "REDUCED",
+              "eligibility": "11. studenci szkół wyższych i wyższych szkół zawodowych bez względu na wiek legitymacja studencka",
+              "sourceId": "ztm-published-tariff",
+              "sourceUrl": "https://ztm.gda.pl/bilety/bilety-jednorazowe,a,3019",
+              "checkedAt": "2026-11-12T07:49:34.899674736Z",
+              "testData": false,
+              "reason": "Taryfa publikowana, nie wycena konkretnego kursu ani rezerwacja na wybrany dzień.",
+              "basis": "PUBLISHED_TARIFF"
+            }
+          ],
+          "bookingUrl": "https://ztm.gda.pl/bilety/bilety-jednorazowe,a,3019",
+          "mapUrl": "https://www.google.com/maps/dir/?api=1&origin=54.35358%2C18.65789&destination=54.35698%2C18.64555&travelmode=transit"
+        }
+      ]
+    }
+  },
+  "publishedTariffs": [
+    {
+      "amount": "4.80",
+      "currency": "PLN",
+      "fareType": "STANDARD",
+      "basis": "PUBLISHED_TARIFF",
+      "sourceUrl": "https://ztm.gda.pl/bilety/bilety-jednorazowe,a,3019",
+      "checkedAt": "2026-11-12T07:49:34.899674736Z",
+      "eligibility": null
+    },
+    {
+      "amount": "2.40",
+      "currency": "PLN",
+      "fareType": "REDUCED",
+      "basis": "PUBLISHED_TARIFF",
+      "sourceUrl": "https://ztm.gda.pl/bilety/bilety-jednorazowe,a,3019",
+      "checkedAt": "2026-11-12T07:49:34.899674736Z",
+      "eligibility": "11. studenci szkół wyższych i wyższych szkół zawodowych bez względu na wiek legitymacja studencka"
+    }
+  ],
+  "attractions": [
+    {
+      "id": "ecs-permanent",
+      "name": "Europejskie Centrum Solidarności — wystawa stała",
+      "location": {
+        "name": "Europejskie Centrum Solidarności",
+        "latitude": 54.3611,
+        "longitude": 18.6492
+      },
+      "visitMinutes": 120,
+      "entryPrices": [
+        {
+          "status": "KNOWN",
+          "amount": "40.00",
+          "currency": "PLN",
+          "fareType": "STANDARD",
+          "eligibility": null,
+          "sourceId": "ecs-permanent-tariff",
+          "sourceUrl": "https://bilety.ecs.gda.pl/index/cennik.html",
+          "checkedAt": "2026-11-12T07:49:34.379721653Z",
+          "testData": false,
+          "reason": "Taryfa publikowana, nie wycena konkretnego kursu ani rezerwacja na wybrany dzień.",
+          "basis": "PUBLISHED_TARIFF"
+        },
+        {
+          "status": "KNOWN",
+          "amount": "35.00",
+          "currency": "PLN",
+          "fareType": "REDUCED",
+          "eligibility": "Studenci do 26 lat z ważną legitymacją studencką; szczegóły w źródle.",
+          "sourceId": "ecs-permanent-tariff",
+          "sourceUrl": "https://bilety.ecs.gda.pl/index/cennik.html",
+          "checkedAt": "2026-11-12T07:49:34.379721653Z",
+          "testData": false,
+          "reason": "Taryfa publikowana, nie wycena konkretnego kursu ani rezerwacja na wybrany dzień.",
+          "basis": "PUBLISHED_TARIFF"
+        }
+      ],
+      "openingHours": {
+        "status": "KNOWN",
+        "intervals": [
+          {
+            "opensAt": "2026-11-14T10:00:00+01:00",
+            "closesAt": "2026-11-14T18:00:00+01:00"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "sourceId": "ecs-permanent-tariff",
+          "url": "https://bilety.ecs.gda.pl/index/cennik.html",
+          "checkedAt": "2026-11-12T07:49:34.379721653Z",
+          "status": "OK",
+          "message": "Taryfa publikowana, nie wycena konkretnego kursu ani rezerwacja na wybrany dzień."
+        },
+        {
+          "sourceId": "ecs-permanent-hours",
+          "url": "https://ecs.gda.pl/zaplanuj-wizyte/godziny-otwarcia/",
+          "checkedAt": "2026-11-12T07:49:35.294134192Z",
+          "status": "OK",
+          "message": "Godziny z publikacji instytucji, bez potwierdzenia puli biletów. Czas wizyty (120 min) jest parametrem planera, nie pomiarem instytucji. Nie potwierdzono czasu dojścia."
+        }
+      ]
+    },
+    {
+      "id": "museum-ww2-main",
+      "name": "Muzeum II Wojny Światowej — wystawa główna",
+      "location": {
+        "name": "Muzeum II Wojny Światowej",
+        "latitude": 54.3563,
+        "longitude": 18.6607
+      },
+      "visitMinutes": 150,
+      "entryPrices": [
+        {
+          "status": "UNKNOWN",
+          "amount": null,
+          "currency": "PLN",
+          "fareType": "STANDARD",
+          "eligibility": null,
+          "sourceId": "museum-ww2-main-tariff",
+          "sourceUrl": "https://www.muzeum1939.pl/wizyta/wizyta-miiws/bilety-i-cennik",
+          "checkedAt": "2026-11-12T07:49:34.608315921Z",
+          "testData": false,
+          "reason": "Nie potwierdzono ceny lub warunków taryfy w odczytanym źródle.",
+          "basis": null
+        },
+        {
+          "status": "UNKNOWN",
+          "amount": null,
+          "currency": "PLN",
+          "fareType": "REDUCED",
+          "eligibility": "Studenci do 26 lat z ważną legitymacją studencką; szczegóły w źródle.",
+          "sourceId": "museum-ww2-main-tariff",
+          "sourceUrl": "https://www.muzeum1939.pl/wizyta/wizyta-miiws/bilety-i-cennik",
+          "checkedAt": "2026-11-12T07:49:34.608315921Z",
+          "testData": false,
+          "reason": "Nie potwierdzono ceny lub warunków taryfy w odczytanym źródle.",
+          "basis": null
+        }
+      ],
+      "openingHours": {
+        "status": "KNOWN",
+        "intervals": [
+          {
+            "opensAt": "2026-11-14T10:00:00+01:00",
+            "closesAt": "2026-11-14T18:00:00+01:00"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "sourceId": "museum-ww2-main-tariff",
+          "url": "https://www.muzeum1939.pl/wizyta/wizyta-miiws/bilety-i-cennik",
+          "checkedAt": "2026-11-12T07:49:34.608315921Z",
+          "status": "NO_COVERAGE",
+          "message": "Nie rozpoznano wymaganych danych w publikacji. Nie zastępujemy ich statycznym cennikiem ani godzinami.",
+          "reasonCode": "UNRECOGNIZED_PUBLICATION"
+        },
+        {
+          "sourceId": "museum-ww2-main-hours",
+          "url": "https://www.muzeum1939.pl/wizyta/wizyta-miiws/godziny-otwarcia",
+          "checkedAt": "2026-11-12T07:49:34.609512416Z",
+          "status": "OK",
+          "message": "Godziny z publikacji instytucji, bez potwierdzenia puli biletów. Czas wizyty (150 min) jest parametrem planera, nie pomiarem instytucji. Nie potwierdzono czasu dojścia."
+        }
+      ]
+    }
+  ],
+  "acceptance": {
+    "priorities": [
+      "LOWEST_TOTAL_COST",
+      "SHORTEST_TRAVEL_TIME",
+      "FEWEST_TRANSFERS",
+      "MOST_TIME_AT_DESTINATION"
+    ],
+    "earlierReturnPreservedItems": true,
+    "missingWalkingTimeVisible": true,
+    "actualBackendRestart": true,
+    "savedPublicReadOnly": true
+  },
+  "coverageProbe": {
+    "date": "2027-12-19",
+    "status": "PARTIAL",
+    "sources": [
+      {
+        "sourceId": "ecs-permanent-tariff",
+        "url": "https://bilety.ecs.gda.pl/index/cennik.html",
+        "checkedAt": "2026-11-12T07:50:04.216400531Z",
+        "status": "OK",
+        "message": "Taryfa publikowana, nie wycena konkretnego kursu ani rezerwacja na wybrany dzień."
+      },
+      {
+        "sourceId": "ecs-permanent-hours",
+        "url": "https://ecs.gda.pl/zaplanuj-wizyte/godziny-otwarcia/",
+        "checkedAt": "2026-11-12T07:50:05.07962371Z",
+        "status": "OK",
+        "message": "Godziny z publikacji instytucji, bez potwierdzenia puli biletów. Czas wizyty (120 min) jest parametrem planera, nie pomiarem instytucji. Nie potwierdzono czasu dojścia."
+      },
+      {
+        "sourceId": "museum-ww2-main-tariff",
+        "url": "https://www.muzeum1939.pl/wizyta/wizyta-miiws/bilety-i-cennik",
+        "checkedAt": "2026-11-12T07:50:04.204480088Z",
+        "status": "NO_COVERAGE",
+        "message": "Nie rozpoznano wymaganych danych w publikacji. Nie zastępujemy ich statycznym cennikiem ani godzinami.",
+        "reasonCode": "UNRECOGNIZED_PUBLICATION"
+      },
+      {
+        "sourceId": "museum-ww2-main-hours",
+        "url": "https://www.muzeum1939.pl/wizyta/wizyta-miiws/godziny-otwarcia",
+        "checkedAt": "2026-11-12T07:50:04.188086665Z",
+        "status": "OK",
+        "message": "Godziny z publikacji instytucji, bez potwierdzenia puli biletów. Czas wizyty (150 min) jest parametrem planera, nie pomiarem instytucji. Nie potwierdzono czasu dojścia."
+      },
+      {
+        "sourceId": "ztm-date-coverage",
+        "url": "https://ckan.multimediagdansk.pl/dataset/c24aa637-3619-4dc2-a171-a23eec8f2172/resource/9c3d6fed-5394-4ef1-b2c6-c8716999149c/download/stoptimesspan.json",
+        "checkedAt": "2026-11-12T07:50:04.183160047Z",
+        "status": "OK",
+        "message": "Odczytano publiczne źródło podczas wyszukiwania."
+      },
+      {
+        "sourceId": "ztm-requested-dates",
+        "url": "https://ckan.multimediagdansk.pl/dataset/c24aa637-3619-4dc2-a171-a23eec8f2172/resource/9c3d6fed-5394-4ef1-b2c6-c8716999149c/download/stoptimesspan.json",
+        "checkedAt": "2026-11-12T07:50:04.183160047Z",
+        "status": "NO_COVERAGE",
+        "message": "Żądane daty są poza opublikowanym zakresem 2026-11-12–2026-11-23. To brak pokrycia, nie potwierdzony brak kursów.",
+        "reasonCode": "OUTSIDE_COVERAGE"
+      }
+    ]
+  },
+  "limits": "Published tariffs are not a dated booking quote. This validates only the approved local Gdańsk stage, not rail/flights/coaches or the full future product scope.",
+  "verifiedRevision": "4cbac09deca0c51c2ddc6640fc9aaf681a992746"
+}

@@ -90,7 +90,12 @@ Data powyżej jest przykładem z SOL-115, nie trwałą gwarancją pokrycia.
 Przed późniejszym uruchomieniem wybierz aktualną datę wewnątrz zakresu API.
 Test odrzuca wynik bez rzeczywistych wariantów, sprawdza daty i czasy,
 `basis: PUBLISHED_TARIFF`, źródła, walutę, czas sprawdzenia oraz warunki
-potwierdzonych ulg. Sprawdza też widoczny rodzaj ceny w mobilnym interfejsie
+potwierdzonych ulg. Weryfikuje również dostępny cennik i godziny atrakcji,
+kolejność czterech priorytetów, wizytę mieszczącą się przed pierwotnym
+powrotem i dodatkowy konflikt po jego skróceniu. Porównuje dokładnie
+punkty i ich terminy, zapisuje plan, faktycznie restartuje Javę i otwiera
+publiczny widok bez edycji. Niepotwierdzony czas dojścia pozostaje ostrzeżeniem.
+Sprawdza też widoczny rodzaj ceny w mobilnym interfejsie
 i osobne `NO_COVERAGE` dla daty poza zakresem, zamiast fałszywego braku kursów.
 Wynik zapisuje w `e2e/artifacts/live-report.json`.
 
@@ -108,7 +113,26 @@ Ponownie wykonano 10/10 grup po dopracowaniu sprzątania. Wymuszony brak
 pliku przeglądarki zakończył się oczekiwanym błędem i zatrzymaniem własnych
 Java/Vite; SIGTERM podczas startu backendu również nie pozostawił procesu.
 
-Nie wykonano w tej wersji zestawu: testu live po integracji nowego adaptera,
-Windows, fizycznego telefonu, czytnika ekranu, innych silników przeglądarki,
-zakupu biletu ani źródeł kolejowych/lotniczych/autokarowych. Nowy adapter
-jest wdrażany niezależnie; koordynator dopisuje wynik testu live po scaleniu.
+### Odbiór zintegrowanej wersji — 12.11.2026
+
+- Backend `./mvnw -B -ntp package`: **53/53 testy PASS**, w tym kontrolowane
+  odpowiedzi źródeł, niewłaściwe daty/linia/agencja, zmienione cenniki,
+  limit rozmiaru i przerwany odczyt powolnego body.
+- Frontend `npm test`: **15/15 PASS**; `npm run build`: **PASS**.
+- Z katalogu `e2e/`: `npm ci`, `npm test`: **10/10 grup PASS** na zintegrowanym
+  backendzie i frontendzie. Runner zbudował aplikację i zainstalował frontend
+  z lockfile. [Zapis wyniku](evidence/sol120-demo-acceptance.json).
+- `E2E_SKIP_BUILD=1 E2E_LIVE_DATE=2026-11-14 npm run test:live`: **PASS**.
+  Rzeczywisty lokalny rozkład, odświeżane taryfy, wybrana atrakcja, cztery
+  priorytety, wcześniejszy powrót, zapis, restart i publiczny odczyt przeszły
+  asercje. [Zapis odczytu](evidence/sol119-live-verification.json).
+- Nagranie odtworzono na zintegrowanej wersji: 7 klatek, 15 s, każda klatka
+  zdekodowana; Chrome potwierdził faktyczne przejście animacji.
+- Niezależne recenzje danych i bezpieczeństwa nie mają otwartych blokad.
+  Usunięto mylne rozpoznanie innego dnia rozkładu jako braku kursów oraz
+  możliwość pozostawienia procesów po przerwaniu startu nagrania.
+
+Wynik dotyczy zatwierdzonego etapu lokalnego; szerszy zakres źródeł ma
+zostać doprecyzowany w dalszym etapie projektu. Nie sprawdzono Windows,
+fizycznego telefonu, czytnika ekranu, innych silników przeglądarki, zakupu
+biletu, hostingu ani źródeł kolejowych/lotniczych/autokarowych.

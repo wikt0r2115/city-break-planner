@@ -16,7 +16,7 @@ oznacza potwierdzonego braku połączenia.
 źródeł cen pozostaje do doprecyzowania w dalszym etapie projektu.**
 Nie deklarujemy rzeczywistych cen między miastami bez potwierdzonego dostępu.
 Stan źródeł i ograniczenia opisuje [raport SOL-115](data-sources.md),
-a odbiór zintegrowanej wersji — raport SOL-120 przygotowywany wraz z kodem.
+a odbiór zintegrowanej wersji — [raport SOL-120](acceptance.md).
 
 ## Materiał demonstracyjny
 
@@ -109,6 +109,10 @@ dotyczy wyłącznie skryptu, instrukcji i mediów; nie zmienia bazy aplikacji.
 Sprawdzono również celowy błąd startu Chrome oraz przerwanie SIGINT po
 uruchomieniu obu serwerów. W obu przypadkach poprzedni GIF pozostał
 niezmieniony; katalog tymczasowy usunięto, a własne procesy zakończono.
+Niezależna recenzja wykryła i potwierdziła też wąskie okno przerwania
+podczas otwierania logu przed startem procesu. Poprawka rejestruje starty
+w toku i blokuje uruchamianie po rozpoczęciu sprzątania. Ponowna kontrolowana
+próba SIGTERM nie pozostawiła procesów ani katalogu i zachowała poprzedni GIF.
 
 ## Kontrola właściciela przed wysłaniem
 

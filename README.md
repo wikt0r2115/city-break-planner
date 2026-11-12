@@ -86,14 +86,16 @@ Oczekiwane HTTP 200 i `{"status":"UP","database":"UP"}`. Awaria bazy daje
 HTTP 503 i `{"status":"DOWN","database":"DOWN"}`. Wyłączony backend
 powoduje czytelny błąd na stronie i pozwala ponowić sprawdzenie.
 
-## Pełny przebieg na danych testowych
+## Wyszukiwanie danych rzeczywistych
 
-Przed trybem testowym możesz sprawdzić dane rzeczywiste bez dodatkowych
+Możesz sprawdzić dane rzeczywiste bez dodatkowych
 kluczy: uruchom domyślny backend i frontend, wpisz **Dworzec Główny** oraz
 **Targ Rybny**, a następnie wybierz daty z opublikowanego zakresu ZTM.
 Zakres może się zmieniać; odpowiedź API podaje brak pokrycia dla zbyt
 odległej daty. Lista pokazuje do 24 wariantów po porównaniu wszystkich
 znalezionych par według wybranego priorytetu. Nie jest pełnym spisem kursów.
+
+## Pełny przebieg na danych testowych
 
 W terminalu backendu, zamiast domyślnego polecenia uruchomienia:
 
@@ -183,9 +185,53 @@ Build sprawdza TypeScript i tworzy `dist/`.
 Backend i Vite muszą działać jednocześnie, aby ręcznie sprawdzić pełne połączenie.
 W Windows użyj `mvnw.cmd` zamiast `./mvnw`; eksport zmiennych dostosuj do powłoki.
 
-Aktualne wyniki, kroki powtórzenia i granice sprawdzenia opisuje
-[raport weryfikacji SOL-115–118](docs/verification.md). Weryfikacja przepływu
-na danych testowych nie zastępuje odbioru rzeczywistych integracji w SOL-120.
+Wyniki i granice aktualnego odbioru opisuje [raport SOL-120](docs/acceptance.md).
+[Raport SOL-115–118](docs/verification.md) zachowuje historię sprawdzenia
+wcześniejszego etapu. Dane testowe i wyniki rzeczywistych odczytów są
+raportowane oddzielnie.
+
+### Testy całego przepływu
+
+Osobny pakiet E2E wymaga Chrome albo przeglądarki zainstalowanej przez
+Playwright. Pracuje na własnych portach i tymczasowym SQLite:
+
+```bash
+cd e2e
+npm ci
+# Jeśli nie masz lokalnego Chrome: npx playwright install chromium
+npm test
+```
+
+Deterministyczny zestaw używa jawnych danych testowych. Osobne sprawdzenie
+rzeczywistych źródeł wymaga daty w aktualnym zakresie rozkładu:
+
+```bash
+E2E_LIVE_DATE=2026-11-14 npm run test:live
+```
+
+Data jest przykładem weryfikacji, a nie trwałą gwarancją pokrycia.
+Szczegóły, wyniki i zakres testów są w [raporcie SOL-120](docs/acceptance.md).
+
+## Architektura
+
+Frontend komunikuje się bezpośrednio z REST Spring Boot. Warstwa `api`
+obsługuje HTTP, `service` walidację i uprawnienia, `planning` ranking
+i harmonogram, `provider` ograniczone czasem i rozmiarem odczyty źródeł,
+a `persistence` atomowe migawki planów w SQLite. Cenniki HTML odczytuje
+Jsoup. Token właściciela przechowujemy w bazie jako hash; publiczny link
+używa niezależnego tokenu i osobnego endpointu tylko do odczytu.
+
+## Nagranie i przygotowanie oddania
+
+[Otwórz demonstrację GIF](docs/media/demo.gif) — rzeczywisty interfejs i API,
+**wyłącznie fikcyjne dane testowe**, stale oznaczone na nagraniu.
+
+![Testowy przepływ wyszukania, konfliktu, zapisu i odczytu planu](docs/media/demo.gif)
+
+[Instrukcja wydania](docs/release.md) opisuje ponowne nagranie, weryfikację
+artefaktu i listę kontroli właściciela. Końcowe sprawdzenie repozytorium
+i wysłanie linku z imieniem i nazwiskiem do Xelerit pozostaje działaniem
+właściciela, przed **15 listopada 2026, 23:59 Europe/Warsaw**.
 
 ## Organizacja dalszej pracy
 

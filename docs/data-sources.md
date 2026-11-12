@@ -129,6 +129,28 @@ przesądza o braku biletów w kasie ani zamknięciu atrakcji.
 
 ## Weryfikacja i granice
 
+### Odczyt wdrożonego adaptera — 12 listopada 2026
+
+[Dowód rzeczywistego wyszukiwania](evidence/sol119-live-verification.json)
+dotyczy linii 100, Dworzec Główny ↔ Targ Rybny, **14.11.2026**.
+Wynik `PARTIAL` zawiera 24 warianty po rankingu wszystkich znalezionych par.
+Potwierdzono źródło, czas odczytu i taryfę publikowaną 4,80 / 2,40 PLN
+(normalna / ulgowa) oraz cennik ECS 40 / 35 PLN. To stan odczytu z 12.11,
+nie gwarancja przyszłej rezerwacji ani taryfa zapisana na stałe w aplikacji.
+
+Godziny atrakcji odczytano ze źródeł. Cena MIIWŚ pozostała `UNKNOWN`, gdy
+aktualnej publikacji nie dało się bezpiecznie rozpoznać; nie podstawiono cen
+z wcześniejszego raportu. Niepotwierdzone czasy dojść są jawnie oznaczane
+jako `MISSING_DATA`. Po wcześniejszym powrocie wybrany punkt zachowuje
+identyfikator i terminy, a otrzymuje dodatkowy powód konfliktu.
+
+Oddzielnie potwierdzono brak pokrycia odległej daty (`NO_COVERAGE`),
+zapis i odczyt po restarcie oraz publiczny widok bez uprawnień edycji.
+To odbiór zatwierdzonego etapu lokalnego. **Szerszy zakres pozostaje do
+doprecyzowania w dalszym etapie projektu**, zgodnie z decyzją właściciela.
+
+### Historyczna weryfikacja badawcza — 11 listopada
+
 Wykonano anonimowe GET przez `urllib.request`: metadane CKAN, zakres dat,
 linie, przystanki, odjazdy linii 100 dla 14.11 i 05.12 oraz chroniony endpoint
 PLK dla 05–06.12. Sprawdzono bieżący obraz rozkładu ZDMiŻ i oficjalne strony

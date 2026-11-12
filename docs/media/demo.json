@@ -1,17 +1,17 @@
 {
-  "recordedAt": "2026-11-11T16:31:49.835Z",
+  "recordedAt": "2026-11-12T07:51:14.556Z",
   "mode": "demo",
   "testData": true,
   "purpose": "Technical workflow only. Fictional fares and schedules; not proof of live route availability.",
-  "sourceRevision": "2abcc061de7d26a6d4a9dd4a2d8c7a4185615889",
+  "sourceRevision": "4cbac09deca0c51c2ddc6640fc9aaf681a992746",
   "browserPlaybackVerified": true,
-  "sha256": "5893b8b65f7e91f0ede96a34a9357458e4ecd4011960af0bdbc11c95a4aa97dc",
+  "sha256": "ad07fb44104a7a3aad6cc821fe473a1bd80f7525f5906991365698ad76cb14d5",
   "format": "GIF",
   "frames": 7,
   "durationMs": 15000,
   "width": 1240,
   "height": 800,
-  "bytes": 409989,
+  "bytes": 415258,
   "encoder": "Pillow 10.2.0",
   "steps": [
     {

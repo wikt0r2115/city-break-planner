@@ -1,0 +1,63 @@
+{
+  "checkedAt": "2026-11-12T07:47:13.021Z",
+  "dataMode": "demo",
+  "route": "Warszawa → Gdańsk",
+  "dates": [
+    "2026-11-19",
+    "2026-11-20"
+  ],
+  "controlledNegativeHttpScenarios": true,
+  "checks": [
+    {
+      "name": "keyboard search, actual HTTP/CORS and explicit test-data labels",
+      "passed": true,
+      "milliseconds": 5794
+    },
+    {
+      "name": "all four server priorities and incomplete costs",
+      "passed": true,
+      "milliseconds": 550
+    },
+    {
+      "name": "earlier return keeps selected points and explains conflicts",
+      "passed": true,
+      "milliseconds": 1720
+    },
+    {
+      "name": "add, remove and reorder attraction through real preview API",
+      "passed": true,
+      "milliseconds": 4084
+    },
+    {
+      "name": "create, update and owner credential separation",
+      "passed": true,
+      "milliseconds": 2274
+    },
+    {
+      "name": "API rejects missing, public and another-owner edit credentials",
+      "passed": true,
+      "milliseconds": 281
+    },
+    {
+      "name": "independent public session, no edit UI and mobile layout",
+      "passed": true,
+      "milliseconds": 1861
+    },
+    {
+      "name": "actual backend process restart keeps plan and public link",
+      "passed": true,
+      "milliseconds": 9239
+    },
+    {
+      "name": "controlled HTTP no-course/source-error responses preserve editor",
+      "passed": true,
+      "milliseconds": 1046
+    },
+    {
+      "name": "deletion revokes previously working public link",
+      "passed": true,
+      "milliseconds": 609
+    }
+  ],
+  "verifiedRevision": "4cbac09deca0c51c2ddc6640fc9aaf681a992746"
+}

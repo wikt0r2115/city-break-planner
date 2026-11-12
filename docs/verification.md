@@ -1,5 +1,8 @@
 # Weryfikacja SOL-115–118 — 11 listopada 2026
 
+To historyczny wynik wcześniejszego etapu. Aktualny odbiór zatwierdzonych
+integracji lokalnych z 12 listopada jest w [raporcie SOL-120](acceptance.md).
+
 Sprawdzono uruchomienie aplikacji, reguły planera, zapis i uprawnienia oraz
 frontend. Przepływ planera korzystał z jawnych danych testowych
 `APP_DATA_MODE=demo`. Nie stanowi potwierdzenia rzeczywistych ofert ani
