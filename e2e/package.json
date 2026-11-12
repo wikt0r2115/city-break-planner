@@ -6,7 +6,8 @@
   "engines": { "node": ">=22.22.2" },
   "scripts": {
     "test": "node run.mjs",
-    "test:live": "node live.mjs"
+    "test:live": "node live.mjs",
+    "test:docker": "node docker.mjs"
   },
   "devDependencies": { "playwright": "1.65.0" }
 }

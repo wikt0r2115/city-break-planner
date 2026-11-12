@@ -40,7 +40,52 @@ pozostałych źródeł. Brak pokrycia daty lub trasy nie oznacza braku kursów.
 Jeśli nie potwierdzono godzin otwarcia, warunków ulgi lub czasu dojścia,
 aplikacja pokazuje ten brak zamiast przyjmować dostępność lub zerowy dojazd.
 
-## Wymagania
+## Najprostszy start — Docker
+
+W głównym katalogu projektu wykonaj:
+
+```bash
+docker compose up --build -d
+```
+
+Otwórz **http://localhost:8080**. Compose zbuduje i uruchomi frontend,
+backend oraz utworzy bazę SQLite w trwałym wolumenie. W tym wariancie
+potrzebujesz tylko Dockera z Compose i obsługą kontenerów linuksowych;
+Java, Maven i Node są dostarczane przez obrazy. Pierwsze budowanie pobiera
+obrazy i zależności z internetu.
+
+Frontend przekazuje `/api` do backendu przez Nginx. Linki do zapisanych
+planów używają tego samego adresu. SQLite działa wewnątrz backendu,
+a plik bazy znajduje się w wolumenie.
+
+```bash
+docker compose ps
+docker compose logs -f --tail=100
+docker compose down
+```
+
+`down` zatrzymuje kontenery i **zachowuje zapisane plany**. Ponowny start
+korzysta z tego samego wolumenu `planner_data` i pliku
+`/data/city-break-planner.db`. Domyślne uruchomienie tworzy nową bazę
+kontenerów; dane są usuwane dopiero przy usunięciu wolumenu.
+
+Domyślnie działa tryb `live` z zatwierdzonym zakresem opisanym poniżej.
+Aby zmienić port lub włączyć jawne dane testowe, przygotuj opcjonalny plik:
+
+```bash
+cp .env.docker.example .env.docker
+docker compose --env-file .env.docker up --build -d
+```
+
+Przed uruchomieniem edytuj `.env.docker`: np. `APP_PORT=18080` zmienia adres
+na `http://localhost:18080`, a `APP_DATA_MODE=demo` włącza oznaczone fikcyjne
+przykłady. Port jest automatycznie uwzględniany w linkach i konfiguracji API.
+`APP_FRONTEND_BASE_URL` pozwala podać inny publiczny adres. Przy dalszych
+poleceniach używaj tego samego `--env-file .env.docker`.
+
+Techniczne sprawdzenie kontenerów: [SOL-122](docs/docker.md).
+
+## Wymagania przy uruchomieniu bez Dockera
 
 - JDK 17–25; lokalna weryfikacja na Java 25.
 - Node.js 22.22.2+ z linii 22 LTS oraz npm 10; `.nvmrc` wskazuje linię 22.

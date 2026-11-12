@@ -1,0 +1,30 @@
+{
+  "checkedAt": "2026-11-12T11:36:12.187Z",
+  "dataMode": "demo",
+  "checks": [
+    "build from source",
+    "healthy SQLite and same-origin API",
+    "non-root processes",
+    "backend not published",
+    "API errors remain JSON",
+    "browser search and save",
+    "SPA owner and public routes",
+    "correct share URL with custom port",
+    "public token cannot delete",
+    "no request tokens in logs after proxy outage",
+    "proxy recovery after backend recreation",
+    "SQLite persistence after compose down/up",
+    "owner deletion revokes link"
+  ],
+  "liveVerified": true,
+  "liveDate": "2026-11-14",
+  "environment": {
+    "docker": "29.9.1",
+    "compose": "5.6.0",
+    "architecture": "x86_64"
+  },
+  "limits": [
+    "Verified on Linux x86_64; Windows, macOS and ARM64 were not tested.",
+    "The live check covers only the approved Gdansk local stage, not the future expanded transport scope."
+  ]
+}
