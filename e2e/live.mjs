@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { apiRequest, buildApp, launchBrowser, root, startApp, stopBuilds, stopApps } from './harness.mjs';
+import { apiRequest, buildApp, launchBrowser, planInput, root, startApp, stopBuilds, stopApps } from './harness.mjs';
 
 const date = process.env.E2E_LIVE_DATE;
 if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(`${date}T00:00:00Z`)) || new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10) !== date)
@@ -45,6 +45,49 @@ try {
     }
   }
   assert.ok(prices.length > 0, 'A live timetable alone does not verify tariff access.');
+  const attraction = result.attractions.find((item) => item.openingHours.status === 'KNOWN'
+    && item.entryPrices.some((price) => price.status === 'KNOWN' && price.fareType === 'STANDARD' && price.basis === 'PUBLISHED_TARIFF'));
+  assert.ok(attraction, 'At least one attraction must have a refreshed tariff and recognized opening hours.');
+  const priorityResults = new Map([['LOWEST_TOTAL_COST', result]]);
+  const costMetric = (trip) => trip.costSummary.complete && trip.costSummary.total !== null ? Number(trip.costSummary.total) : Infinity;
+  assert.ok(result.roundTripOptions.every((trip, index, all) => !index || costMetric(all[index - 1]) <= costMetric(trip)));
+  for (const priority of ['SHORTEST_TRAVEL_TIME', 'FEWEST_TRANSFERS', 'MOST_TIME_AT_DESTINATION']) {
+    const ranked = await apiRequest(app, 'POST', '/searches', { ...criteria, priority });
+    assert.equal(ranked.status, 200);
+    assert.ok(ranked.body.roundTripOptions.length > 0);
+    const metric = (trip) => priority === 'SHORTEST_TRAVEL_TIME' ? trip.travelMinutes
+      : priority === 'FEWEST_TRANSFERS' ? trip.transfers : -trip.timeAtDestinationMinutes;
+    assert.ok(ranked.body.roundTripOptions.every((trip, index, all) => !index || metric(all[index - 1]) <= metric(trip)));
+    priorityResults.set(priority, ranked.body);
+  }
+  const latest = priorityResults.get('MOST_TIME_AT_DESTINATION').roundTripOptions[0];
+  const earlier = result.roundTripOptions.filter((trip) => Date.parse(trip.returnJourney.departureAt) < Date.parse(latest.returnJourney.departureAt))
+    .sort((a, b) => Date.parse(a.returnJourney.departureAt) - Date.parse(b.returnJourney.departureAt))[0];
+  assert.ok(earlier, 'The verified local timetable must offer an earlier return for this acceptance scenario.');
+  const opening = attraction.openingHours.intervals.find((interval) => interval.opensAt.startsWith(date));
+  assert.ok(opening);
+  const lateVisit = new Date(Math.max(Date.parse(opening.opensAt), Date.parse(earlier.returnJourney.departureAt))).toISOString();
+  const visitEnd = Date.parse(lateVisit) + attraction.visitMinutes * 60000;
+  assert.ok(Date.parse(lateVisit) >= Date.parse(latest.outbound.arrivalAt));
+  assert.ok(visitEnd <= Date.parse(opening.closesAt) && visitEnd <= Date.parse(latest.returnJourney.departureAt), 'The visit must fit opening hours and the original return before shortening the trip.');
+  const draft = await apiRequest(app, 'POST', '/plans/preview', { criteria, selectedRoundTrip: latest,
+    items: [{ id: 'live-acceptance-item', attractionId: attraction.id, startsAt: lateVisit, visitMinutes: attraction.visitMinutes }] });
+  assert.equal(draft.status, 200);
+  assert.ok(draft.body.items.every((item) => item.conflicts.every((conflict) => !['RETURN_DEPARTURE', 'OPENING_HOURS'].includes(conflict.code))));
+  const changed = await apiRequest(app, 'POST', '/plans/preview', { ...planInput(draft.body), selectedRoundTrip: earlier });
+  assert.equal(changed.status, 200);
+  const selectedItems = (plan) => plan.items.map(({ id, attractionId, startsAt, endsAt }) => ({ id, attractionId, startsAt, endsAt }));
+  assert.deepEqual(selectedItems(changed.body), selectedItems(draft.body));
+  assert.ok(changed.body.items[0].conflicts.some((conflict) => conflict.code === 'RETURN_DEPARTURE'));
+  assert.ok(changed.body.items[0].conflicts.some((conflict) => conflict.code === 'MISSING_DATA'), 'Unknown walking time must remain visible rather than becoming zero.');
+  const created = await apiRequest(app, 'POST', '/plans', planInput(changed.body));
+  assert.equal(created.status, 201);
+  const savedPlan = created.body.plan;
+  const ownerToken = created.body.ownerToken;
+  await app.restartBackend('live');
+  const persisted = await apiRequest(app, 'GET', `/plans/${savedPlan.id}`, undefined, ownerToken);
+  assert.equal(persisted.status, 200);
+  assert.deepEqual(persisted.body.items, savedPlan.items);
   browser = await launchBrowser();
   const context = await browser.newContext({ viewport: { width: 360, height: 900 }, locale: 'pl-PL' });
   const page = await context.newPage();
@@ -59,6 +102,16 @@ try {
   await page.getByText(/Taryfa publikowana/i).first().waitFor();
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
   await context.close();
+  const publicContext = await browser.newContext({ viewport: { width: 360, height: 900 }, locale: 'pl-PL' });
+  const publicPage = await publicContext.newPage();
+  await publicPage.goto(savedPlan.shareUrl);
+  await publicPage.getByText('Tylko do odczytu', { exact: true }).waitFor();
+  assert.equal(await publicPage.getByRole('button').count(), 0);
+  assert.equal(await publicPage.locator('.test-banner').count(), 0);
+  await publicPage.locator('.conflicts').first().waitFor();
+  assert.ok(!(await publicPage.locator('body').innerText()).includes(ownerToken));
+  await publicContext.close();
+  assert.equal((await apiRequest(app, 'DELETE', `/plans/${savedPlan.id}`, undefined, ownerToken)).status, 204);
 
   const distant = new Date(`${date}T12:00:00Z`);
   distant.setUTCDate(distant.getUTCDate() + 400);
@@ -75,6 +128,9 @@ try {
     status: result.status, optionCount: result.roundTripOptions.length, sources: result.sources,
     firstRoundTrip: { outbound: result.roundTripOptions[0].outbound, returnJourney: result.roundTripOptions[0].returnJourney },
     publishedTariffs: [...new Map(prices.map((price) => [JSON.stringify(price), price])).values()],
+    attractions: result.attractions,
+    acceptance: { priorities: [...priorityResults.keys()], earlierReturnPreservedItems: true, missingWalkingTimeVisible: true,
+      actualBackendRestart: true, savedPublicReadOnly: true },
     coverageProbe: { date: outside, status: coverage.body.status, sources: coverage.body.sources },
     limits: 'Published tariffs are not a dated booking quote. This validates only the approved local Gdańsk stage, not rail/flights/coaches or the full future product scope.' }, null, 2));
   failed = false;

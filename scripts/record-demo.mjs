@@ -40,13 +40,17 @@ try {
 const work = await fs.mkdtemp(path.join(os.tmpdir(), 'city-break-recording-'));
 const children = [];
 const handles = [];
+const pendingLaunches = new Set();
+let stopping = false;
 let browser;
 let browserPromise;
 let temporaryOutput;
 let cleanupPromise;
 const pause = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 function cleanup() {
+  stopping = true;
   return cleanupPromise ||= (async () => {
+    await Promise.allSettled([...pendingLaunches]);
     const activeBrowser = browser || await browserPromise?.catch(() => undefined);
     await activeBrowser?.close().catch(() => {});
     await Promise.allSettled(children.map(stop));
@@ -54,6 +58,9 @@ function cleanup() {
     await fs.rm(work, { recursive: true, force: true });
     if (temporaryOutput) await fs.rm(temporaryOutput, { force: true });
   })();
+}
+function ensureRunning() {
+  if (stopping) throw new Error('Recording was stopped.');
 }
 for (const [signal, code] of [['SIGINT', 130], ['SIGTERM', 143]]) {
   process.once(signal, () => { void cleanup().finally(() => process.exit(code)); });
@@ -65,18 +72,35 @@ async function unusedPort() {
   await new Promise((resolve, reject) => socket.close((error) => error ? reject(error) : resolve()));
   return port;
 }
-async function launch(command, args, cwd, env, label) {
-  const log = await fs.open(path.join(work, `${label}.log`), 'a', 0o600);
-  handles.push(log);
-  const child = spawn(command, args, { cwd, env: { ...process.env, ...env }, stdio: ['ignore', log.fd, log.fd], windowsHide: true });
-  child.spawnError = undefined;
-  child.once('error', (error) => { child.spawnError = error; });
-  children.push(child);
-  return child;
+function launch(command, args, cwd, env, label) {
+  ensureRunning();
+  const operation = (async () => {
+    const log = await fs.open(path.join(work, `${label}.log`), 'a', 0o600);
+    if (stopping) {
+      await log.close();
+      ensureRunning();
+    }
+    handles.push(log);
+    const child = spawn(command, args, { cwd, env: { ...process.env, ...env }, stdio: ['ignore', log.fd, log.fd], windowsHide: true });
+    child.spawnError = undefined;
+    child.once('error', (error) => { child.spawnError = error; });
+    children.push(child);
+    return child;
+  })();
+  pendingLaunches.add(operation);
+  operation.then(() => pendingLaunches.delete(operation), () => pendingLaunches.delete(operation));
+  return operation;
+}
+function runOwned(command, args) {
+  ensureRunning();
+  const operation = exec(command, args);
+  children.push(operation.child);
+  return operation;
 }
 async function ready(url, child) {
   const deadline = Date.now() + 45000;
   while (Date.now() < deadline) {
+    ensureRunning();
     if (child.spawnError || child.exitCode !== null || child.signalCode !== null) throw new Error('Recording server could not start. Check the backend build and free local ports.');
     try { if ((await fetch(url, { signal: AbortSignal.timeout(1000) })).ok) return; } catch {}
     await pause(100);
@@ -84,7 +108,7 @@ async function ready(url, child) {
   throw new Error('Recording server did not become ready within 45 seconds.');
 }
 async function stop(child) {
-  if (child.exitCode !== null || child.signalCode !== null) return;
+  if (!child.pid || child.exitCode !== null || child.signalCode !== null) return;
   child.kill('SIGTERM');
   const stopped = new Promise((resolve) => child.once('exit', resolve));
   await Promise.race([stopped, pause(3000)]);
@@ -127,6 +151,7 @@ try {
       if (await fs.access(candidate).then(() => true, () => false)) { executablePath = candidate; break; }
     }
   }
+  ensureRunning();
   browserPromise = playwright.chromium.launch({ headless: true, timeout: 15000,
     handleSIGINT: false, handleSIGTERM: false, handleSIGHUP: false,
     ...(executablePath ? { executablePath } : {}),
@@ -203,7 +228,7 @@ try {
   temporaryOutput = path.join(path.dirname(output), `.recording-${process.pid}.gif`);
   const manifest = path.join(work, 'frames.json');
   await fs.writeFile(manifest, JSON.stringify(frames));
-  const encoded = await exec(python, [path.join(root, 'scripts/lib/recording/encode-gif.py'), manifest, temporaryOutput]);
+  const encoded = await runOwned(python, [path.join(root, 'scripts/lib/recording/encode-gif.py'), manifest, temporaryOutput]);
   const properties = JSON.parse(encoded.stdout);
   const playbackContext = await browser.newContext({ viewport: { width: 1260, height: 820 } });
   const playback = await playbackContext.newPage();
@@ -218,9 +243,10 @@ try {
   }
   assert.ok(advanced, 'The browser must actually advance the animated GIF');
   await playbackContext.close();
+  ensureRunning();
   await fs.rename(temporaryOutput, output);
   temporaryOutput = undefined;
-  const revision = await exec('git', ['-C', frontend, 'rev-parse', 'HEAD']).then((result) => result.stdout.trim(), () => 'unknown');
+  const revision = await runOwned('git', ['-C', frontend, 'rev-parse', 'HEAD']).then((result) => result.stdout.trim(), () => 'unknown');
   const metadata = {
     recordedAt: new Date().toISOString(), mode: 'demo', testData: true,
     purpose: 'Technical workflow only. Fictional fares and schedules; not proof of live route availability.',
