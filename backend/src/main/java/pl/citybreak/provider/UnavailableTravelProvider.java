@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 import pl.citybreak.model.Model.*;
 
 @Component
-@ConditionalOnProperty(name = "app.data-mode", havingValue = "live", matchIfMissing = true)
+@ConditionalOnProperty(name = "app.data-mode", havingValue = "unavailable")
 public class UnavailableTravelProvider implements TravelProvider {
     private final Clock clock;
     public UnavailableTravelProvider(Clock clock) { this.clock = clock; }
