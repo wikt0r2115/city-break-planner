@@ -1,0 +1,21 @@
+{
+  "checkedAt": "2026-11-12T07:59:30.384Z",
+  "results": [
+    {
+      "kind": "map",
+      "requestedUrl": "https://www.google.com/maps/dir/?api=1&origin=54.35524%2C18.64517&destination=54.35358%2C18.65789&travelmode=transit",
+      "finalUrl": "https://www.google.com/maps/dir/?api=1&origin=54.35524,18.64517&destination=54.35358,18.65789&travelmode=transit",
+      "status": 200,
+      "title": "Dworzec Główny 14, 80-895 Gdańsk do Targ Rybny 01, 80-841 Gdańsk – Mapy Google",
+      "consent": "Rejected optional cookies in an isolated test context.",
+      "routeParametersPreserved": true
+    },
+    {
+      "kind": "operator",
+      "requestedUrl": "https://ztm.gda.pl/bilety/bilety-jednorazowe,a,3019",
+      "finalUrl": "https://ztm.gda.pl/bilety/bilety-jednorazowe,a,3019",
+      "status": 200,
+      "title": "ZTM w Gdańsku"
+    }
+  ]
+}

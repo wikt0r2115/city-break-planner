@@ -128,6 +128,16 @@ Java/Vite; SIGTERM podczas startu backendu również nie pozostawił procesu.
   asercje. [Zapis odczytu](evidence/sol119-live-verification.json).
 - Nagranie odtworzono na zintegrowanej wersji: 7 klatek, 15 s, każda klatka
   zdekodowana; Chrome potwierdził faktyczne przejście animacji.
+- Osobny, świeży `git clone --no-hardlinks` rewizji `1e82c46`, bez kopiowania
+  `target`, `dist` i `node_modules`, przeszedł budowanie backendu i 53 testy,
+  `npm ci`, 15 testów frontendu i build oraz `npm ci` i 10 grup E2E.
+  W drugim uruchomieniu E2E użyto `E2E_SKIP_BUILD=1` po osobnym zbudowaniu
+  obu części w tym klonie. Zachowano wyłącznie zainstalowane narzędzia hosta
+  i cache pakietów. [Zapis sprawdzenia](evidence/sol120-clean-checkout.json).
+- Linki rzeczywistego odcinka otwarto w osobnej przeglądarce: stronę taryfy
+  operatora oraz adres trasy Map Google. Początkowy ekran zgód Google
+  obsłużono odrzuceniem opcjonalnych cookies w jednorazowym kontekście.
+  [Zapis nawigacji](evidence/sol120-external-links.json).
 - Niezależne recenzje danych i bezpieczeństwa nie mają otwartych blokad.
   Usunięto mylne rozpoznanie innego dnia rozkładu jako braku kursów oraz
   możliwość pozostawienia procesów po przerwaniu startu nagrania.

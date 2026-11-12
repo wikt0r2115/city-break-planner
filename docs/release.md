@@ -2,7 +2,8 @@
 
 Repozytorium: [wikt0r2115/city-break-planner](https://github.com/wikt0r2115/city-break-planner).
 11.11.2026 potwierdzono przez API GitHuba `private: false` i główną gałąź
-`main`. Publiczne repozytorium nie oznacza opublikowanego hostingu aplikacji.
+`main`. Ponownie potwierdzono ten stan 12.11.2026. Publiczne repozytorium
+nie oznacza opublikowanego hostingu aplikacji.
 
 ## Zatwierdzony etap i dalsze doprecyzowanie
 

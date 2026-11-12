@@ -1,0 +1,83 @@
+{
+  "checkedAt": "2026-11-12T07:58:55.848487+00:00",
+  "revision": "1e82c4611d27b1e1a6f06345530b4997efae9d45",
+  "checkout": "fresh local git clone --no-hardlinks, no target or node_modules copied",
+  "backend": {
+    "tests": 53,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "frontend": {
+    "tests": 15,
+    "failures": 0,
+    "npmCi": true,
+    "productionBuild": true
+  },
+  "e2e": {
+    "groups": 10,
+    "passed": true,
+    "dataMode": "demo",
+    "checks": [
+      {
+        "name": "keyboard search, actual HTTP/CORS and explicit test-data labels",
+        "passed": true,
+        "milliseconds": 2134
+      },
+      {
+        "name": "all four server priorities and incomplete costs",
+        "passed": true,
+        "milliseconds": 125
+      },
+      {
+        "name": "earlier return keeps selected points and explains conflicts",
+        "passed": true,
+        "milliseconds": 497
+      },
+      {
+        "name": "add, remove and reorder attraction through real preview API",
+        "passed": true,
+        "milliseconds": 1308
+      },
+      {
+        "name": "create, update and owner credential separation",
+        "passed": true,
+        "milliseconds": 1206
+      },
+      {
+        "name": "API rejects missing, public and another-owner edit credentials",
+        "passed": true,
+        "milliseconds": 212
+      },
+      {
+        "name": "independent public session, no edit UI and mobile layout",
+        "passed": true,
+        "milliseconds": 978
+      },
+      {
+        "name": "actual backend process restart keeps plan and public link",
+        "passed": true,
+        "milliseconds": 9843
+      },
+      {
+        "name": "controlled HTTP no-course/source-error responses preserve editor",
+        "passed": true,
+        "milliseconds": 918
+      },
+      {
+        "name": "deletion revokes previously working public link",
+        "passed": true,
+        "milliseconds": 546
+      }
+    ]
+  },
+  "commands": [
+    "backend: ./mvnw -B -ntp package",
+    "frontend: npm ci && npm test && npm run build",
+    "e2e: npm ci && E2E_SKIP_BUILD=1 npm test"
+  ],
+  "limits": [
+    "Host JDK, Node and package caches were reused; application build outputs and node_modules were not copied.",
+    "Linux and local Chrome only."
+  ]
+}
