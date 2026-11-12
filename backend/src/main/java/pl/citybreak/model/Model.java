@@ -11,8 +11,9 @@ public final class Model {
     public enum Priority { LOWEST_TOTAL_COST, SHORTEST_TRAVEL_TIME, FEWEST_TRANSFERS, MOST_TIME_AT_DESTINATION }
     public enum FareType { STANDARD, REDUCED }
     public enum PriceStatus { KNOWN, UNKNOWN, PROVIDER_ERROR }
+    public enum PriceBasis { LIVE_OFFER, PUBLISHED_TARIFF, TEST_DATA }
     public enum SearchStatus { OK, PARTIAL, NO_CONNECTION, PROVIDER_ERROR }
-    public enum SourceStatus { OK, NO_CONNECTION, PROVIDER_ERROR }
+    public enum SourceStatus { OK, NO_CONNECTION, PROVIDER_ERROR, NO_COVERAGE }
     public enum OpeningStatus { KNOWN, UNKNOWN }
     public enum Mode { TRAIN, PLANE, COACH, FERRY, LOCAL_TRANSIT, WALK }
     public enum ConflictCode { RETURN_DEPARTURE, OPENING_HOURS, TRANSFER_TIME, MISSING_DATA }
@@ -21,9 +22,20 @@ public final class Model {
     public record Place(String name, Double latitude, Double longitude) {}
     public record Price(PriceStatus status, String amount, String currency, FareType fareType,
             String eligibility, String sourceId, String sourceUrl, OffsetDateTime checkedAt,
-            boolean testData, String reason) {}
+            boolean testData, String reason, PriceBasis basis) {
+        public Price(PriceStatus status, String amount, String currency, FareType fareType,
+                String eligibility, String sourceId, String sourceUrl, OffsetDateTime checkedAt,
+                boolean testData, String reason) {
+            this(status, amount, currency, fareType, eligibility, sourceId, sourceUrl, checkedAt,
+                    testData, reason, testData ? PriceBasis.TEST_DATA : null);
+        }
+    }
     public record Source(String sourceId, String url, OffsetDateTime checkedAt,
-            SourceStatus status, String message) {}
+            SourceStatus status, String message, @JsonInclude(JsonInclude.Include.NON_NULL) String reasonCode) {
+        public Source(String sourceId, String url, OffsetDateTime checkedAt, SourceStatus status, String message) {
+            this(sourceId, url, checkedAt, status, message, null);
+        }
+    }
     public record Segment(String id, Mode mode, String operator, Place origin, Place destination,
             OffsetDateTime departureAt, OffsetDateTime arrivalAt, List<Price> prices,
             String bookingUrl, String mapUrl) {}
