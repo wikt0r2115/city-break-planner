@@ -10,7 +10,9 @@ React / TypeScript / Vite pozwala wybrać podróż, edytować atrakcje, zobaczy�
 konflikty po zmianie powrotu oraz udostępnić zapisany plan do odczytu.
 
 Domyślny tryb `live` odczytuje rzeczywisty rozkład linii 100 w Gdańsku
-oraz dostępne oficjalne cenniki atrakcji. **Taryfa publikowana nie jest ofertą
+oraz dostępne oficjalne cenniki atrakcji. Pilotaż kolejowy dodaje bezpośrednie
+kierunki **Gdańsk Główny ↔ Gdynia Główna** i **Gdańsk Główny ↔ Wejherowo**
+z planowanego rozkładu PKP SKM. **Taryfa publikowana nie jest ofertą
 wycenioną dla konkretnej rezerwacji.** API zwraca źródło i czas odczytu ceny;
 niedostępne dane pozostają oznaczone jako niepotwierdzone.
 Pełny scenariusz reguł planera można też sprawdzić w jawnym trybie danych
@@ -30,8 +32,8 @@ oraz dostępne oficjalne cenniki atrakcji. To lokalny odcinek w mieście,
 nie połączenie Warszawa–Gdańsk. Przystanki po obu stronach Dworca mogą mieć
 różne identyfikatory; adapter sprawdza rzeczywistą kolejność i godziny kursu.
 
-**Zakres kolei, samolotów, autokarów, promów, pozostałych tras oraz dostawców
-cen wymaga doprecyzowania w dalszym etapie projektu.** Ten etap nie oznacza
+**Zakres pozostałych tras kolejowych, samolotów, autokarów, promów oraz
+dostawców cen wymaga doprecyzowania w dalszym etapie projektu.** Ten etap nie oznacza
 pełnego pokrycia wszystkich środków transportu. Nie zakładano kont,
 nie kupowano dostępu i nie deklarujemy działania niezweryfikowanych API.
 
@@ -264,6 +266,29 @@ npm.cmd run dev
 
 Otwórz **http://localhost:5173**. Tryb danych zmienisz po zatrzymaniu backendu
 i ponownym wykonaniu polecenia `java -jar` z odpowiednią wartością `APP_DATA_MODE`.
+
+### Pilotaż kolejowy i opcjonalne wyszukiwanie AI
+
+W trybie `live` wyszukaj Gdańsk Główny → Gdynia Główna albo Gdańsk Główny →
+Wejherowo, także w odwróconym kierunku. Wybierz daty z aktualnego rozkładu.
+Warianty korzystają z [publicznej publikacji GTFS PKP SKM](https://bip.skm.pkp.pl/otwarte-dane)
+i pokazują planowane godziny. Ceny i ulgi są niedostępne w tym źródle. Przy
+priorytecie kosztowym żaden wariant bez wyceny nie otrzymuje oznaczenia najtańszego.
+
+Opcjonalny adapter OpenAI znajduje kandydatów i cytowane źródła za pomocą
+[Responses API z wyszukiwaniem](https://developers.openai.com/api/docs/guides/tools-web-search).
+Backend potwierdza kierunek i godziny w GTFS. Gdy zabraknie potwierdzonego
+przejazdu w obie strony, aplikacja pokazuje połączenia z GTFS. Wybór innego
+powrotu, zapis i odczyt planu korzystają z rozkładu bez kolejnego wywołania AI.
+
+Domyślne `APP_AI_PROVIDER=off` pozwala używać pilotażu bez klucza. Aby włączyć
+adapter, ustaw `APP_AI_PROVIDER=openai` i przekaż `OPENAI_API_KEY` do procesu
+backendu. Compose odczytuje obie zmienne ze środowiska lub z lokalnego
+pliku `.env.docker`. `APP_AI_MODEL` domyślnie ma wartość `gpt-6-luna`,
+`APP_AI_TIMEOUT_SECONDS` domyślnie 8, a `APP_AI_DAILY_REQUESTS` domyślnie 20
+na proces i dzień w strefie Europe/Warsaw. Po osiągnięciu limitu aplikacja
+korzysta z rozkładu. Dla stałego limitu wydatków ustaw też limit u dostawcy API.
+Klucz należy do konfiguracji backendu i nie jest przesyłany do przeglądarki.
 
 Wyniki i granice aktualnego odbioru opisuje [raport SOL-120](docs/acceptance.md).
 [Raport SOL-115–118](docs/verification.md) zachowuje historię sprawdzenia

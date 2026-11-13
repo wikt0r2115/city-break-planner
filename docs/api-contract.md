@@ -30,8 +30,10 @@ Brak dopasowania zwraca pustą tablicę.
 
 `value` trafia do `origin` lub `destination` w żądaniu wyszukiwania.
 `label` jest etykietą dla użytkownika. W trybie live katalog obejmuje
-Dworzec Główny i Targ Rybny w Gdańsku, w obu kierunkach. Katalog określa
-obsługiwane miejsca. Dostępność połączeń dla dat nadal sprawdza wyszukiwanie.
+przystanki linii 100 (Dworzec Główny i Targ Rybny) oraz stacje pilotażu SKM
+(Gdańsk Główny, Gdynia Główna, Wejherowo). Wyszukiwanie sprawdza, które pary
+i daty obejmuje rozkład. Dla obsługiwanej pary kolejowej odpowiedź podaje
+kanoniczne wartości `origin` i `destination` również po wpisaniu nazwy miasta.
 W trybie demo `testData: true` oznacza przykładowe podpowiedzi. Formularz
 pozwala też wpisać własną nazwę.
 
@@ -65,7 +67,7 @@ niż wyjazd i wyjazd nie w przeszłości (strefa Europe/Warsaw).
 Remisy: krótszy łączny czas podróży, mniej przesiadek, następnie `id`
 leksykograficznie. `fareType`: `STANDARD` albo `REDUCED`.
 
-Wynik: `searchId`, `criteria` (żądanie), `status`, `roundTripOptions[]`,
+Wynik: `searchId`, `criteria` (kryteria użyte do wyszukania), `status`, `roundTripOptions[]`,
 `attractions[]`, `sources[]`, `testData` (boolean).
 
 | Stan wyniku | Znaczenie |
@@ -84,6 +86,10 @@ Opcjonalny `reasonCode` rozróżnia `UNSUPPORTED_ROUTE`, `OUTSIDE_COVERAGE`,
 trasy lub daty przez źródło, a nie potwierdzony brak kursów.
 `UNRECOGNIZED_PUBLICATION` oznacza, że zmieniona treść publikacji nie
 pozwoliła bezpiecznie odczytać wymaganych danych.
+`AMBIGUOUS_PLACE` oznacza, że wpis pasuje do więcej niż jednej stacji.
+Opcjonalne wyszukiwanie AI dodaje `AI_NOT_CONFIGURED`, `AI_UNAVAILABLE`,
+`AI_NO_MATCH` lub `AI_VERIFIED`. Gdy AI nie dostarczy pełnej propozycji
+potwierdzonej dla obu kierunków, wyniki pochodzą z rozkładu SKM.
 Brak obsługi trasy zgłaszamy jako brak danych z uzasadnieniem, nie jako brak kursów.
 
 Wariant w obie strony: `id`, `outbound`, `returnJourney`, `travelMinutes`,
@@ -93,6 +99,12 @@ Segment: `id`, `mode: TRAIN | PLANE | COACH | FERRY | LOCAL_TRANSIT | WALK`,
 `operator`, `origin`, `destination`, `departureAt`, `arrivalAt`, `prices[]`,
 `bookingUrl` i `mapUrl` (URL lub null). Miejsca zawierają `name`,
 `latitude` i `longitude` (współrzędne mogą być null).
+W odcinkach kolejowych `scheduleSourceUrl` odsyła do publikacji źródła,
+`scheduleBasis` ma wartość `PLANNED` (planowany rozkład) lub `REALTIME`
+(aktualizacja na żywo). `schedulePublishedAt` i `scheduleCheckedAt` to czas
+publikacji oraz odczytu rozkładu. `discoverySourceUrl` jest opcjonalnym
+odnośnikiem z wyszukiwania AI i występuje tylko w wynikach wyszukiwania.
+Przeliczanie i zapis korzystają bezpośrednio z rozkładu SKM.
 Przejazdy wariantu muszą pozostawiać nieujemny czas na miejscu.
 
 ## Ceny i atrakcje

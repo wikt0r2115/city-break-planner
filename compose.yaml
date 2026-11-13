@@ -12,6 +12,11 @@ services:
       APP_FRONTEND_BASE_URL: ${APP_FRONTEND_BASE_URL:-http://localhost:${APP_PORT:-8080}}
       APP_DATA_MODE: ${APP_DATA_MODE:-live}
       APP_SOURCE_TIMEOUT_SECONDS: ${APP_SOURCE_TIMEOUT_SECONDS:-3}
+      APP_AI_PROVIDER: ${APP_AI_PROVIDER:-off}
+      APP_AI_MODEL: ${APP_AI_MODEL:-gpt-6-luna}
+      APP_AI_TIMEOUT_SECONDS: ${APP_AI_TIMEOUT_SECONDS:-8}
+      APP_AI_DAILY_REQUESTS: ${APP_AI_DAILY_REQUESTS:-20}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     volumes:
       - planner_data:/data
     read_only: true

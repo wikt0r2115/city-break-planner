@@ -16,6 +16,7 @@ public final class Model {
     public enum SourceStatus { OK, NO_CONNECTION, PROVIDER_ERROR, NO_COVERAGE }
     public enum OpeningStatus { KNOWN, UNKNOWN }
     public enum Mode { TRAIN, PLANE, COACH, FERRY, LOCAL_TRANSIT, WALK }
+    public enum ScheduleBasis { PLANNED, REALTIME }
     public enum ConflictCode { RETURN_DEPARTURE, OPENING_HOURS, TRANSFER_TIME, MISSING_DATA }
     public record Criteria(String origin, String destination, LocalDate departureDate,
             LocalDate returnDate, Priority priority, String currency, FareType fareType) {}
@@ -40,7 +41,19 @@ public final class Model {
     }
     public record Segment(String id, Mode mode, String operator, Place origin, Place destination,
             OffsetDateTime departureAt, OffsetDateTime arrivalAt, List<Price> prices,
-            String bookingUrl, String mapUrl) {}
+            String bookingUrl, String mapUrl,
+            @JsonInclude(JsonInclude.Include.NON_NULL) String scheduleSourceUrl,
+            @JsonInclude(JsonInclude.Include.NON_NULL) ScheduleBasis scheduleBasis,
+            @JsonInclude(JsonInclude.Include.NON_NULL) OffsetDateTime schedulePublishedAt,
+            @JsonInclude(JsonInclude.Include.NON_NULL) OffsetDateTime scheduleCheckedAt,
+            @JsonInclude(JsonInclude.Include.NON_NULL) String discoverySourceUrl) {
+        public Segment(String id, Mode mode, String operator, Place origin, Place destination,
+                OffsetDateTime departureAt, OffsetDateTime arrivalAt, List<Price> prices,
+                String bookingUrl, String mapUrl) {
+            this(id, mode, operator, origin, destination, departureAt, arrivalAt, prices, bookingUrl, mapUrl,
+                    null, null, null, null, null);
+        }
+    }
     public record Journey(OffsetDateTime departureAt, OffsetDateTime arrivalAt, List<Segment> segments) {}
     public record CostSummary(String total, String currency, FareType fareType,
             boolean complete, List<String> missingComponents) {}
