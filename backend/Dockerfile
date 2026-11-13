@@ -1,6 +1,11 @@
 # syntax=docker/dockerfile:1
 FROM eclipse-temurin:25-jdk-jammy AS build
 
+# The wrapper checks the checksum of the ZIP. With no unzip it selects a tarball instead.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends unzip \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /workspace
 COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
