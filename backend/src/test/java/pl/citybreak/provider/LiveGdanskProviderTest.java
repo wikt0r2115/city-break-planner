@@ -187,6 +187,16 @@ class LiveGdanskProviderTest {
         assertThat(LiveGdanskProvider.exportedTime(day,"1899-12-31T00:07:00",before).toString()).isEqualTo("2026-11-15T00:07+01:00");
         assertThat(LiveGdanskProvider.normalize("Gdańsk Dworzec Główny")).isEqualTo("dworzec glowny");
     }
+    @Test void placeCatalogUsesTheSameCoverageAsSearchInBothDirections() {
+        List<PlaceSuggestion> stops = provider.placeCatalog().places();
+        PlaceSuggestion first = stops.get(0);
+        PlaceSuggestion second = stops.get(1);
+        assertThat(LiveGdanskProvider.supported(first.value(), second.value())).isTrue();
+        assertThat(LiveGdanskProvider.supported(second.value(), first.value())).isTrue();
+        assertThat(LiveGdanskProvider.supported(second.label(), "  DWORZEC   GLOWNY ")).isTrue();
+        assertThat(LiveGdanskProvider.supported(first.value(), first.label())).isFalse();
+        assertThat(LiveGdanskProvider.supported(first.value(), "Kraków")).isFalse();
+    }
     private Criteria criteria() { return new Criteria("Dworzec Główny", "Targ Rybny", LocalDate.of(2026,11,14), LocalDate.of(2026,11,14), Priority.LOWEST_TOTAL_COST,"PLN",FareType.STANDARD); }
     private static String key(URI uri) { return uri.getRawPath() + (uri.getRawQuery() == null ? "" : "?" + uri.getRawQuery()); }
     private void put(String url, String body) { fixtures.put(key(URI.create(url)),new Reply(200,body)); }

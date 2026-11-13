@@ -20,6 +20,8 @@ public final class Model {
     public record Criteria(String origin, String destination, LocalDate departureDate,
             LocalDate returnDate, Priority priority, String currency, FareType fareType) {}
     public record Place(String name, Double latitude, Double longitude) {}
+    public record PlaceSuggestion(String value, String label) {}
+    public record PlaceCatalog(List<PlaceSuggestion> places, boolean testData) {}
     public record Price(PriceStatus status, String amount, String currency, FareType fareType,
             String eligibility, String sourceId, String sourceUrl, OffsetDateTime checkedAt,
             boolean testData, String reason, PriceBasis basis) {

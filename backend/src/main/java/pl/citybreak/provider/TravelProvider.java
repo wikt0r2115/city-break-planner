@@ -7,6 +7,7 @@ import pl.citybreak.model.Model.*;
 public interface TravelProvider {
     record Catalog(List<RoundTrip> options, List<Attraction> attractions, List<Source> sources,
             SearchStatus status, boolean testData) {}
+    PlaceCatalog placeCatalog();
     Catalog search(Criteria criteria);
     /** Null means transfer data unavailable, never assume zero. */
     Integer transferMinutes(Place from, Place to);

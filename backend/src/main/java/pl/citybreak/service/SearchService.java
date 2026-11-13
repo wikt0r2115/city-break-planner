@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import pl.citybreak.model.Model.*;
+import pl.citybreak.model.PlaceNames;
 import pl.citybreak.planning.Planner;
 import pl.citybreak.provider.TravelProvider;
 
@@ -15,6 +16,20 @@ public class SearchService {
     public SearchService(TravelProvider provider, Planner planner, InputValidation validation) {
         this.provider = provider; this.planner = planner; this.validation = validation;
     }
+
+    public PlaceCatalog places(String query) {
+        PlaceCatalog catalog = provider.placeCatalog();
+        String normalizedQuery = PlaceNames.normalize(query);
+        if (normalizedQuery.isEmpty()) return catalog;
+
+        List<String> terms = List.of(normalizedQuery.split(" "));
+        List<PlaceSuggestion> matches = catalog.places().stream().filter(place -> {
+            String text = PlaceNames.normalize(place.value() + " " + place.label());
+            return terms.stream().allMatch(text::contains);
+        }).toList();
+        return new PlaceCatalog(matches, catalog.testData());
+    }
+
     public SearchResponse search(Criteria criteria) {
         validation.criteria(criteria);
         TravelProvider.Catalog catalog = provider.search(criteria);

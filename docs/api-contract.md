@@ -20,6 +20,21 @@ Wszystkie poniższe przykłady są danymi testowymi, bez potwierdzonych ofert.
 HTTP 200 oznacza działającą bazę. Niedostępna baza daje HTTP 503
 z `{"status":"DOWN","database":"DOWN"}`, bez szczegółów połączenia.
 
+## Podpowiedzi miejsc — SOL-129, SOL-130
+
+`GET /api/v1/places` → HTTP 200 zwraca
+`{places: [{value, label}], testData: boolean}`. Opcjonalny parametr `q`
+filtruje po nazwie niezależnie od wielkości liter, polskich znaków i
+nadmiarowych spacji. Brak parametru lub pusta wartość zwraca cały katalog.
+Brak dopasowania zwraca pustą tablicę.
+
+`value` trafia do `origin` lub `destination` w żądaniu wyszukiwania.
+`label` jest etykietą dla użytkownika. W trybie live katalog obejmuje
+Dworzec Główny i Targ Rybny w Gdańsku, w obu kierunkach. Katalog określa
+obsługiwane miejsca. Dostępność połączeń dla dat nadal sprawdza wyszukiwanie.
+W trybie demo `testData: true` oznacza przykładowe podpowiedzi. Formularz
+pozwala też wpisać własną nazwę.
+
 ## Wyszukiwanie — SOL-117, SOL-119
 
 `POST /api/v1/searches` → HTTP 200. Dane testowe żądania:

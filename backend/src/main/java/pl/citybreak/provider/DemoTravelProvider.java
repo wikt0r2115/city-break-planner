@@ -14,8 +14,13 @@ import pl.citybreak.model.Model.*;
 public class DemoTravelProvider implements TravelProvider {
     private static final ZoneId ZONE = ZoneId.of("Europe/Warsaw");
     private static final String SOURCE = "https://example.com/city-break-test-data";
+    private static final PlaceCatalog PLACES = new PlaceCatalog(List.of(
+            new PlaceSuggestion("Warszawa", "Warszawa"),
+            new PlaceSuggestion("Gdańsk", "Gdańsk")), true);
     private final Clock clock;
     public DemoTravelProvider(Clock clock) { this.clock = clock; }
+    @Override public PlaceCatalog placeCatalog() { return PLACES; }
+
     @Override public Catalog search(Criteria criteria) {
         Source source = new Source("demo-fixtures", SOURCE, OffsetDateTime.now(clock), SourceStatus.OK,
                 "DANE TESTOWE: wymyślone połączenia, ceny i atrakcje; nie są ofertą sprzedaży.");

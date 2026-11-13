@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PreDestroy;
 import java.net.URI;
-import java.text.Normalizer;
 import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -14,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import pl.citybreak.model.Model.*;
+import pl.citybreak.model.PlaceNames;
 
 /** Approved incremental coverage: ZTM Gdańsk line 100 and published attraction tariffs. */
 @Component
@@ -28,6 +28,9 @@ public class LiveGdanskProvider implements TravelProvider, AutoCloseable {
     public static final String ECS_PRICE = "https://bilety.ecs.gda.pl/index/cennik.html";
     public static final String ECS_HOURS = "https://ecs.gda.pl/zaplanuj-wizyte/godziny-otwarcia/";
     private static final ZoneId ZONE = ZoneId.of("Europe/Warsaw");
+    private static final PlaceCatalog PLACES = new PlaceCatalog(List.of(
+            new PlaceSuggestion("Dworzec Główny", "Dworzec Główny, Gdańsk"),
+            new PlaceSuggestion("Targ Rybny", "Targ Rybny, Gdańsk")), false);
     @FunctionalInterface public interface SourceFetcher { String get(URI uri) throws Exception; }
     public record Read(String url, String body, OffsetDateTime checkedAt, String error) {
         Source source(String id) { return new Source(id, url, checkedAt,
@@ -49,6 +52,8 @@ public class LiveGdanskProvider implements TravelProvider, AutoCloseable {
     public LiveGdanskProvider(Clock clock, ObjectMapper json, SourceFetcher fetcher) {
         this.clock = clock; this.json = json; this.fetcher = fetcher;
     }
+
+    @Override public PlaceCatalog placeCatalog() { return PLACES; }
 
     @Override public Catalog search(Criteria criteria) {
         if (!supported(criteria.origin(), criteria.destination())) return new Catalog(List.of(), List.of(), List.of(
@@ -183,12 +188,15 @@ public class LiveGdanskProvider implements TravelProvider, AutoCloseable {
         return result;
     }
     static String normalize(String value) {
-        String text = Normalizer.normalize(value, Normalizer.Form.NFD).replaceAll("\\p{M}", "").toLowerCase(Locale.ROOT).replace('ł', 'l').strip();
-        return text.replaceFirst("^gdansk[ ,]+", "").replaceAll("\\s+", " ");
+        return PlaceNames.normalize(value).replaceFirst("^gdansk ", "").replaceFirst(" gdansk$", "");
     }
     static boolean supported(String from, String to) {
-        Set<String> stops = Set.of("dworzec glowny", "targ rybny");
-        return stops.contains(normalize(from)) && stops.contains(normalize(to)) && !normalize(from).equals(normalize(to));
+        String start = normalize(from);
+        String end = normalize(to);
+        return !start.equals(end) && isCoveredStop(start) && isCoveredStop(end);
+    }
+    private static boolean isCoveredStop(String normalizedName) {
+        return PLACES.places().stream().anyMatch(place -> normalize(place.value()).equals(normalizedName));
     }
     private Read read(String url) {
         try { return new Read(url, fetcher.get(URI.create(url)), OffsetDateTime.now(clock), null); }

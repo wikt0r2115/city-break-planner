@@ -12,6 +12,7 @@ import pl.citybreak.model.Model.*;
 public class UnavailableTravelProvider implements TravelProvider {
     private final Clock clock;
     public UnavailableTravelProvider(Clock clock) { this.clock = clock; }
+    @Override public PlaceCatalog placeCatalog() { return new PlaceCatalog(List.of(), false); }
     @Override public Catalog search(Criteria criteria) {
         Source source = new Source("unconfigured", null, OffsetDateTime.now(clock), SourceStatus.PROVIDER_ERROR,
                 "Nie skonfigurowano zweryfikowanych źródeł ofert. To brak danych, nie potwierdzony brak połączeń.");
