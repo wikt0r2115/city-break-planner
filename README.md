@@ -290,6 +290,13 @@ na proces i dzień w strefie Europe/Warsaw. Po osiągnięciu limitu aplikacja
 korzysta z rozkładu. Dla stałego limitu wydatków ustaw też limit u dostawcy API.
 Klucz należy do konfiguracji backendu i nie jest przesyłany do przeglądarki.
 
+Sprawdzenie integracyjne uruchom w `e2e/` poleceniem `npm run test:rail`,
+ustawiając `E2E_RAIL_DATE` na datę z aktualnego rozkładu. Test używa
+rzeczywistego GTFS i wyłącza AI. Jeśli na Windowsie używany JDK zgłasza
+błąd zaufania TLS do SKM, a system ufa temu certyfikatowi, uruchom proces
+Javy z opcjami `-Djavax.net.ssl.trustStoreType=Windows-ROOT`
+i `-Djavax.net.ssl.trustStore=NONE`, żeby użyć magazynu zaufania Windows.
+
 Wyniki i granice aktualnego odbioru opisuje [raport SOL-120](docs/acceptance.md).
 [Raport SOL-115–118](docs/verification.md) zachowuje historię sprawdzenia
 wcześniejszego etapu. Dane testowe i wyniki rzeczywistych odczytów są

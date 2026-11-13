@@ -157,6 +157,19 @@ Java/Vite; SIGTERM podczas startu backendu również nie pozostawił procesu.
 - Scenariusze uruchomiono bezpośrednio przez Javę i Vite. Weryfikacja Docker
   Compose pozostaje udokumentowana dla [Linuksa](docker.md).
 
-Wyniki dotyczą zatwierdzonego zakresu danych w Gdańsku. Fizyczny telefon,
-czytnik ekranu, inne silniki przeglądarki, zakup biletu, hosting i źródła
-kolejowe, lotnicze oraz autokarowe pozostają poza tym odbiorem.
+Wyniki z tego przebiegu dotyczą zakresu danych miejskich w Gdańsku.
+
+### Pilotaż SKM i wyszukiwania AI — 13.11.2026
+
+- `npm run test:rail` z datą 14.11.2026 i rzeczywistym GTFS PKP SKM zwrócił
+  po 24 najwyżej sklasyfikowane pary kursów dla Gdańska–Gdyni oraz
+  Gdańska–Wejherowa. Sprawdzono oba kierunki w każdym wariancie, więcej niż
+  jedną godzinę powrotu, brak ceny, datę poza rozkładem, zmianę wariantu,
+  zapis oraz publiczny odczyt w Edge. Dane pochodzą z planowanego rozkładu.
+- PKP SKM udostępnia plik GTFS publicznie do przetwarzania maszynowego.
+  Karta pokazuje pełną nazwę operatora, odnośnik do BIP, datę publikacji
+  i czas pobrania. [Zasady korzystania z otwartych danych SKM](https://bip.skm.pkp.pl/otwarte-dane).
+- Testy z kontrolowanym HTTP potwierdziły parsowanie cytowań, limit
+  odpowiedzi i timeout. Testy integracji usługi potwierdziły odrzucenie
+  błędnych kandydatów i zachowanie wyników GTFS przy awarii AI. Rzeczywiste
+  wywołanie dostawcy pozostaje do odbioru po wyborze dostawcy i konfiguracji klucza.
