@@ -85,7 +85,7 @@ function Planner({ ownerId, onSaved }: { ownerId: string | null; onSaved: (id: s
     getPlan(ownerId, token, controller.signal).then(async (stored) => {
       if (controller.signal.aborted) return;
       setPlan(stored); setSaved({ id: ownerId, shareUrl: stored.shareUrl || null }); setCriteria(stored.criteria); setDirty(false);
-      try { const catalog = await searchTrips(stored.criteria, controller.signal); if (!controller.signal.aborted) setResult(catalog); }
+      try { const catalog = await searchTrips(stored.criteria, controller.signal, false); if (!controller.signal.aborted) setResult(catalog); }
       catch { if (!controller.signal.aborted) setNotice('Zapisany plan jest dostępny. Nie udało się odświeżyć listy połączeń i atrakcji.'); }
     }).catch((err: unknown) => { if (!controller.signal.aborted) setError(errorMessage(err)); }).finally(() => { if (!controller.signal.aborted) setBusy(''); });
     return () => controller.abort();

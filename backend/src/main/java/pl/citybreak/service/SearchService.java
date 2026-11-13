@@ -53,9 +53,13 @@ public class SearchService {
     }
 
     public SearchResponse search(Criteria criteria) {
+        return search(criteria, true);
+    }
+
+    public SearchResponse search(Criteria criteria, boolean discovery) {
         validation.criteria(criteria);
         Criteria canonical = rail == null ? null : rail.canonicalCriteria(criteria);
-        TravelProvider.Catalog catalog = canonical == null ? baseSearch(criteria) : rail.search(canonical, true);
+        TravelProvider.Catalog catalog = canonical == null ? baseSearch(criteria) : rail.search(canonical, discovery);
         Criteria effectiveCriteria = canonical == null ? criteria : canonical;
         List<RoundTrip> allRanked = planner.rank(effectiveCriteria, catalog.options(), catalog.attractions());
         List<RoundTrip> ranked = allRanked.stream().limit(24).toList();

@@ -39,7 +39,8 @@ pozwala też wpisać własną nazwę.
 
 ## Wyszukiwanie — SOL-117, SOL-119
 
-`POST /api/v1/searches` → HTTP 200. Dane testowe żądania:
+`POST /api/v1/searches` → HTTP 200. Parametr `discovery=false` pomija
+opcjonalne wywołanie AI przy odświeżaniu zapisanej trasy. Dane testowe żądania:
 
 ```json
 {

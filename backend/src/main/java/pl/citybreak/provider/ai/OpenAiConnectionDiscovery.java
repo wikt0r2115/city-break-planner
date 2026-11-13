@@ -61,7 +61,7 @@ public final class OpenAiConnectionDiscovery implements ConnectionDiscovery {
     public OpenAiConnectionDiscovery(ObjectMapper json, @Value("${app.ai.api-key:}") String apiKey,
             @Value("${app.ai.model:gpt-6-luna}") String model,
             @Value("${app.ai.timeout-seconds:8}") int timeoutSeconds) {
-        this(json, apiKey, model, Duration.ofSeconds(Math.max(1, Math.min(20, timeoutSeconds))), ENDPOINT);
+        this(json, apiKey, model, Duration.ofSeconds(Math.max(1, Math.min(15, timeoutSeconds))), ENDPOINT);
     }
 
     OpenAiConnectionDiscovery(ObjectMapper json, String apiKey, String model, Duration timeout, URI endpoint) {

@@ -53,8 +53,9 @@ export async function getPlaceCatalog(signal?: AbortSignal): Promise<PlaceCatalo
   if (!isPlaceCatalog(body)) throw new ApiError('Aplikacja zwróciła nieprawidłowe podpowiedzi miejsc.');
   return body;
 }
-export async function searchTrips(criteria: Criteria, signal?: AbortSignal): Promise<SearchResult> {
-  const body = await request('/searches', 'POST', criteria, undefined, signal, SEARCH_TIMEOUT_MS);
+export async function searchTrips(criteria: Criteria, signal?: AbortSignal, discovery = true): Promise<SearchResult> {
+  const path = discovery ? '/searches' : '/searches?discovery=false';
+  const body = await request(path, 'POST', criteria, undefined, signal, SEARCH_TIMEOUT_MS);
   if (!isSearch(body)) throw new ApiError('Aplikacja zwróciła nieprawidłową odpowiedź wyszukiwania.');
   return body;
 }

@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -73,7 +74,7 @@ class RailSearch {
 
         // URLs from the model's cited results are display-only. GTFS is retrieved independently.
         Map<String, String> sourcesBySegment = new HashMap<>();
-        List<Segment> known = planned.stream().flatMap(trip -> java.util.stream.Stream.concat(
+        List<Segment> known = planned.stream().flatMap(trip -> Stream.concat(
                 trip.outbound().segments().stream(), trip.returnJourney().segments().stream())).distinct().toList();
         for (Candidate candidate : candidates) {
             String from = timetable.canonicalPlace(candidate.origin());
@@ -105,8 +106,8 @@ class RailSearch {
     }
 
     private static RoundTrip withSchedule(RoundTrip trip, List<Source> sources) {
-        Source acquisition = sources.stream().filter(source -> source.sourceId().equals("skm-gtfs")).findFirst().orElseThrow();
-        OffsetDateTime published = sources.stream().filter(source -> source.sourceId().equals("skm-feed-published"))
+        Source acquisition = sources.stream().filter(source -> source.sourceId().equals(SkmTimetable.SOURCE_ID)).findFirst().orElseThrow();
+        OffsetDateTime published = sources.stream().filter(source -> source.sourceId().equals(SkmTimetable.PUBLICATION_ID))
                 .findFirst().map(Source::checkedAt).orElse(null);
         return replaceJourneys(trip, provenance(trip.outbound(), acquisition, published),
                 provenance(trip.returnJourney(), acquisition, published));

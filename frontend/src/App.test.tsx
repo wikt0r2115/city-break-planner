@@ -18,7 +18,7 @@ function mockApi() {
   const previews: PlanInput[] = [];
   const fetch = vi.fn(async (url: string, options: RequestInit = {}) => {
     if (url.endsWith('/places')) return json({ places: [], testData: true });
-    if (url.endsWith('/searches')) return json(result);
+    if (url.includes('/searches')) return json(result);
     if (url.endsWith('/plans/preview')) { const input = JSON.parse(String(options.body)) as PlanInput; previews.push(input); return json(planFor(input)); }
     if (url.endsWith('/plans') && options.method === 'POST') { const input = JSON.parse(String(options.body)) as PlanInput; return json({ plan: { ...planFor(input), id: savedPlan.id, shareUrl: savedPlan.shareUrl }, ownerToken: 'private-test-owner-token' }, 201); }
     if (url.includes('/shared-plans/')) { const { shareUrl: _private, ...publicPlan } = savedPlan; return json(publicPlan); }

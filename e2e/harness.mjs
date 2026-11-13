@@ -86,7 +86,7 @@ async function ready(process, url) {
   throw new Error(`Test server did not become ready; inspect ${process.logPath}.`);
 }
 
-export async function startApp({ mode = 'demo', controlledFaults = false } = {}) {
+export async function startApp({ mode = 'demo', controlledFaults = false, aiProvider = 'off' } = {}) {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'city-break-e2e-'));
   const apiPort = await freePort();
   let frontendPort = await freePort();
@@ -110,6 +110,7 @@ export async function startApp({ mode = 'demo', controlledFaults = false } = {})
       SERVER_ADDRESS: '127.0.0.1', SERVER_PORT: String(apiPort),
       SPRING_DATASOURCE_URL: `jdbc:sqlite:${path.join(directory, 'plans.db')}`,
       APP_CORS_ALLOWED_ORIGINS: url, APP_FRONTEND_BASE_URL: url, APP_DATA_MODE: dataMode,
+      APP_AI_PROVIDER: aiProvider,
     }, path.join(directory, 'backend.log'));
     await ready(backend, `${api}/health`);
   };
