@@ -1,0 +1,436 @@
+{
+  "issue": "SOL-123",
+  "researchDate": "2026-11-13",
+  "scope": "Anonymous access and primary-source documentation research; no application integration, accounts, purchases or production booking quotes.",
+  "polishAndTransitousProbes": [
+    {
+      "name": "polregio",
+      "checkedAt": "2026-11-13T07:19:00.047668+00:00",
+      "url": "https://transfer.polregio.pl/public/file/2xpjhbomseoindotgttcsg/GTFS.zip",
+      "status": 200,
+      "bytes": 2376612,
+      "sha256": "2c5c5fe52bc0be30649780ca5154ef27bc27efeadbd86fa6db6d4611ffea9569",
+      "contentType": "application/zip",
+      "files": [
+        "agency.txt",
+        "calendar.txt",
+        "calendar_dates.txt",
+        "routes.txt",
+        "stops.txt",
+        "trips.txt",
+        "stop_times.txt"
+      ],
+      "calendarBounds": {
+        "min": "20260727",
+        "max": "20261212",
+        "note": "Granice wpisów kalendarza, nie gwarancja każdej relacji każdego dnia; uwzględniono calendar_dates."
+      },
+      "stops": 6079,
+      "routes": 3452,
+      "trips": 12780,
+      "fareFiles": [],
+      "activeDates": {
+        "20261114": {
+          "services": 1904,
+          "trips": 1975
+        },
+        "20261205": {
+          "services": 1902,
+          "trips": 1984
+        },
+        "20261206": {
+          "services": 1880,
+          "trips": 1964
+        }
+      },
+      "agency": [
+        {
+          "agency_id": "PR",
+          "agency_name": "POLREGIO",
+          "agency_url": "https://www.polregio.pl/",
+          "agency_timezone": "Europe/Warsaw",
+          "agency_fare_url": "https://bilety.polregio.pl"
+        }
+      ]
+    },
+    {
+      "name": "skm",
+      "checkedAt": "2026-11-13T07:19:00.048716+00:00",
+      "url": "https://www.skm.pkp.pl/gtfs-mi-kpd.zip",
+      "status": 200,
+      "bytes": 15258598,
+      "sha256": "e520f420f03aacab53b68530d5b800d069f5f747572cd8fa928d42819003183b",
+      "contentType": "application/zip",
+      "files": [
+        "stops.txt",
+        "stop_times.txt",
+        "routes.txt",
+        "calendar_dates.txt",
+        "agency.txt",
+        "calendar.txt",
+        "trips.txt",
+        "shapes.txt"
+      ],
+      "calendarBounds": {
+        "min": "20261019",
+        "max": "20261212",
+        "note": "Granice wpisów kalendarza, nie gwarancja każdej relacji każdego dnia; uwzględniono calendar_dates."
+      },
+      "stops": 81,
+      "routes": 1454,
+      "trips": 1454,
+      "fareFiles": [],
+      "activeDates": {
+        "20261114": {
+          "services": 89,
+          "trips": 89
+        },
+        "20261205": {
+          "services": 89,
+          "trips": 89
+        },
+        "20261206": {
+          "services": 89,
+          "trips": 89
+        }
+      },
+      "agency": [
+        {
+          "agency_id": "SKMTr",
+          "agency_name": "PKP Szybka Kolej Miejska w Trójmieście Sp. z o.o.",
+          "agency_url": "http://www.skm.pkp.pl/",
+          "agency_timezone": "Europe/Warsaw",
+          "agency_fare_url": "https://bilety.skm.pkp.pl/"
+        }
+      ]
+    },
+    {
+      "name": "plk",
+      "checkedAt": "2026-11-13T07:19:00.052314+00:00",
+      "url": "https://pdp-api.plk-sa.pl/api/v1/schedules?dateFrom=2026-12-05&dateTo=2026-12-06",
+      "status": 401,
+      "bytes": 310,
+      "sha256": "7ea865300696c120346486a6dfa82b023867f8e148cece61df9f8c39cd51f88c",
+      "contentType": "application/json",
+      "responseTopKeys": [
+        "error",
+        "errorCode",
+        "message",
+        "messageEn",
+        "timestamp",
+        "path"
+      ],
+      "response": {
+        "error": "Unauthorized",
+        "errorCode": "MissingKey",
+        "message": "Brak klucza API. Użyj nagłówka X-Api-Key lub Authorization: Bearer {api_key}",
+        "messageEn": "Missing API key. Use X-Api-Key header or Authorization: Bearer {api_key}",
+        "timestamp": "2026-11-13T07:19:00.2698428Z",
+        "path": "/api/v1/schedules"
+      }
+    },
+    {
+      "name": "transitous",
+      "checkedAt": "2026-11-13T07:19:00.053932+00:00",
+      "url": "https://api.transitous.org/api/v6/plan?fromPlace=52.2297%2C21.0032&toPlace=54.3556%2C18.6442&time=2026-12-05T07%3A00%3A00%2B01%3A00&numItineraries=3",
+      "status": 200,
+      "bytes": 150568,
+      "sha256": "c708a04635b322c356092efc9b71567787eacf9c1530266e4b3798913a2609f5",
+      "contentType": "application/json",
+      "responseTopKeys": [
+        "requestParameters",
+        "debugOutput",
+        "from",
+        "to",
+        "direct",
+        "itineraries",
+        "previousPageCursor",
+        "nextPageCursor"
+      ],
+      "itineraries": [
+        {
+          "startTime": "2026-12-05T06:22:00Z",
+          "endTime": "2026-12-05T09:04:00Z",
+          "duration": 9720,
+          "transfers": 0,
+          "legs": [
+            {
+              "mode": "WALK",
+              "routeShortName": null,
+              "headsign": null,
+              "from": "START",
+              "to": "Warszawa Centralna",
+              "startTime": "2026-12-05T06:22:00Z",
+              "endTime": "2026-12-05T06:29:00Z",
+              "source": null,
+              "agencyName": null
+            },
+            {
+              "mode": "HIGHSPEED_RAIL",
+              "routeShortName": "EIP",
+              "headsign": "Gdynia Główna",
+              "from": "Warszawa Centralna",
+              "to": "Gdańsk Główny",
+              "startTime": "2026-12-05T06:29:00Z",
+              "endTime": "2026-12-05T09:01:00Z",
+              "source": "pl_PKP-Intercity.gtfs.zip/stop_times.txt:42925:42935",
+              "agencyName": "PKP Intercity",
+              "realTime": false,
+              "tripShortName": "1502",
+              "scheduledStartTime": "2026-12-05T06:29:00Z",
+              "scheduledEndTime": "2026-12-05T09:01:00Z"
+            },
+            {
+              "mode": "WALK",
+              "routeShortName": null,
+              "headsign": null,
+              "from": "Gdańsk Główny",
+              "to": "END",
+              "startTime": "2026-12-05T09:01:00Z",
+              "endTime": "2026-12-05T09:04:00Z",
+              "source": null,
+              "agencyName": null
+            }
+          ]
+        },
+        {
+          "startTime": "2026-12-05T07:22:00Z",
+          "endTime": "2026-12-05T09:57:00Z",
+          "duration": 9300,
+          "transfers": 0,
+          "legs": [
+            {
+              "mode": "WALK",
+              "routeShortName": null,
+              "headsign": null,
+              "from": "START",
+              "to": "Warszawa Centralna",
+              "startTime": "2026-12-05T07:22:00Z",
+              "endTime": "2026-12-05T07:29:00Z",
+              "source": null,
+              "agencyName": null
+            },
+            {
+              "mode": "HIGHSPEED_RAIL",
+              "routeShortName": "EIP",
+              "headsign": "Gdynia Główna",
+              "from": "Warszawa Centralna",
+              "to": "Gdańsk Główny",
+              "startTime": "2026-12-05T07:29:00Z",
+              "endTime": "2026-12-05T09:54:00Z",
+              "source": "pl_PKP-Intercity.gtfs.zip/stop_times.txt:42989:42997",
+              "agencyName": "PKP Intercity",
+              "realTime": false,
+              "tripShortName": "3510",
+              "scheduledStartTime": "2026-12-05T07:29:00Z",
+              "scheduledEndTime": "2026-12-05T09:54:00Z"
+            },
+            {
+              "mode": "WALK",
+              "routeShortName": null,
+              "headsign": null,
+              "from": "Gdańsk Główny",
+              "to": "END",
+              "startTime": "2026-12-05T09:54:00Z",
+              "endTime": "2026-12-05T09:57:00Z",
+              "source": null,
+              "agencyName": null
+            }
+          ]
+        },
+        {
+          "startTime": "2026-12-05T07:41:00Z",
+          "endTime": "2026-12-05T10:37:00Z",
+          "duration": 10560,
+          "transfers": 0,
+          "legs": [
+            {
+              "mode": "WALK",
+              "routeShortName": null,
+              "headsign": null,
+              "from": "START",
+              "to": "Warszawa Centralna",
+              "startTime": "2026-12-05T07:41:00Z",
+              "endTime": "2026-12-05T07:49:00Z",
+              "source": null,
+              "agencyName": null
+            },
+            {
+              "mode": "LONG_DISTANCE",
+              "routeShortName": "EIC",
+              "headsign": "Gdynia Główna",
+              "from": "Warszawa Centralna",
+              "to": "Gdańsk Główny",
+              "startTime": "2026-12-05T07:49:00Z",
+              "endTime": "2026-12-05T10:34:00Z",
+              "source": "pl_PKP-Intercity.gtfs.zip/stop_times.txt:9744:9759",
+              "agencyName": "PKP Intercity",
+              "realTime": false,
+              "tripShortName": "4550 Wysocki",
+              "scheduledStartTime": "2026-12-05T07:49:00Z",
+              "scheduledEndTime": "2026-12-05T10:34:00Z"
+            },
+            {
+              "mode": "WALK",
+              "routeShortName": null,
+              "headsign": null,
+              "from": "Gdańsk Główny",
+              "to": "END",
+              "startTime": "2026-12-05T10:34:00Z",
+              "endTime": "2026-12-05T10:37:00Z",
+              "source": null,
+              "agencyName": null
+            }
+          ]
+        }
+      ],
+      "errors": null,
+      "requestContext": "Lekka próba prototypu zgodna z dopuszczeniem przed publikacją licencji; jawny User-Agent CityBreakPlannerResearch/0.1 (+https://github.com/wikt0r2115); brak kont/kluczy.",
+      "prices": "Nie potwierdzono taryfy ani ceny oferty w zwróconych itineraries."
+    }
+  ],
+  "walkingAccessProbe": [
+    {
+      "provider": "openrouteservice/HeiGIT",
+      "checkedAt": "2026-11-13T07:18:55.714506+00:00",
+      "method": "GET",
+      "url": "https://api.heigit.org/openrouteservice/v2/directions/foot-walking?start=18.6466%2C54.3555&end=18.6597%2C54.3520",
+      "credentialsUsed": false,
+      "httpStatus": 401,
+      "contentType": "application/json",
+      "result": "{\n    \"error\": \"Authorization field missing\"\n}",
+      "interpretation": "Anonymous access probe; not a route or fare verification."
+    }
+  ],
+  "commercialDocumentationChecks": {
+    "amadeus": {
+      "checkedAt": "2026-11-13T07:19:40.548642+00:00",
+      "url": "https://developers.amadeus.com/",
+      "method": "Anonymous GET, Google Chrome headless rendered DOM; no credentials",
+      "renderExitCode": 0,
+      "decommissionNoticeObserved": true,
+      "excerpts": [
+        "self-service portal has been decommissioned on July 17th, this website is for Amadeus Enterprise API Portal only"
+      ],
+      "scopeNote": "Directly observed in rendered DOM on checkedAt. Notice has no year. No old test-key or production endpoint was called."
+    },
+    "httpProbes": [
+      {
+        "url": "https://www.omio.com/corporate/omio-b2b/",
+        "checkedAt": "2026-11-13T07:19:53.026453+00:00",
+        "method": "Anonymous HTTPS GET using Python urllib; no credentials",
+        "status": 403,
+        "error": "HTTP error; no bypass attempted"
+      },
+      {
+        "url": "https://www.omio.com/terms-of-use",
+        "checkedAt": "2026-11-13T07:19:53.027517+00:00",
+        "method": "Anonymous HTTPS GET using Python urllib; no credentials",
+        "status": 403,
+        "error": "HTTP error; no bypass attempted"
+      },
+      {
+        "url": "https://www.distribusion.com/",
+        "checkedAt": "2026-11-13T07:19:53.028735+00:00",
+        "method": "Anonymous HTTPS GET using Python urllib; no credentials",
+        "status": 200,
+        "finalUrl": "https://www.distribusion.com/",
+        "contentType": "text/html; charset=UTF-8",
+        "bodyBytes": 1119504,
+        "title": "Distribusion | The ground transportation technology company"
+      },
+      {
+        "url": "https://docs.distribusion.com/",
+        "checkedAt": "2026-11-13T07:19:53.029901+00:00",
+        "method": "Anonymous HTTPS GET using Python urllib; no credentials",
+        "status": 200,
+        "finalUrl": "https://docs.distribusion.com/",
+        "contentType": "text/html; charset=utf-8",
+        "bodyBytes": 19044,
+        "title": "Distribusion API"
+      },
+      {
+        "url": "https://global.flixbus.com/company/partners/affiliate-partners",
+        "checkedAt": "2026-11-13T07:19:53.030751+00:00",
+        "method": "Anonymous HTTPS GET using Python urllib; no credentials",
+        "status": 200,
+        "finalUrl": "https://global.flixbus.com/company/partners/affiliate-partners",
+        "contentType": "text/html; charset=UTF-8",
+        "bodyBytes": 105471,
+        "title": "Become an affiliate partner of FlixBus"
+      },
+      {
+        "url": "https://tps.thetrainline.com/our-products/global-api/",
+        "checkedAt": "2026-11-13T07:19:53.182782+00:00",
+        "method": "Anonymous HTTPS GET using Python urllib; no credentials",
+        "status": 200,
+        "finalUrl": "https://tps.thetrainline.com/our-products/global-api/",
+        "contentType": "text/html; charset=utf-8",
+        "bodyBytes": 19130,
+        "title": "Global Travel API | Buisness Travel | Trainline Partner Solutions | Trainline Partner Solutions | Global Rail Travel &amp; Technology"
+      },
+      {
+        "url": "https://duffel.com/pricing",
+        "checkedAt": "2026-11-13T07:19:53.184538+00:00",
+        "method": "Anonymous HTTPS GET using Python urllib; no credentials",
+        "status": 403,
+        "error": "HTTP error; no bypass attempted"
+      },
+      {
+        "url": "https://duffel.com/services-agreement",
+        "checkedAt": "2026-11-13T07:19:53.243809+00:00",
+        "method": "Anonymous HTTPS GET using Python urllib; no credentials",
+        "status": 403,
+        "error": "HTTP error; no bypass attempted"
+      },
+      {
+        "url": "https://www.directferriesconnect.com/connect",
+        "checkedAt": "2026-11-13T07:19:53.308327+00:00",
+        "method": "Anonymous HTTPS GET using Python urllib; no credentials",
+        "status": 200,
+        "finalUrl": "https://www.directferriesconnect.com/connect",
+        "contentType": "text/html;charset=utf-8",
+        "bodyBytes": 1014391,
+        "title": "Connect | Increase Sales Today &mdash; Direct Ferries Connect"
+      }
+    ],
+    "sourceFindings": [
+      {
+        "url": "https://www.omio.com/corporate/omio-b2b/",
+        "finding": "Meta Search API exposes pricing, availability and routing with checkout redirect; Booking API requires deeper merchant integration. B2B contact path; no public price verified.",
+        "checkedAt": "2026-11-13T07:20:14.168923+00:00",
+        "observationMethod": "Official page content read via web tool; separate anonymous Python HTTP result in httpProbes, which may return403"
+      },
+      {
+        "url": "https://global.flixbus.com/company/partners/affiliate-partners",
+        "finding": "Dynamic integration lists GTFS, API, white label and metasearch; applicant supplies company, domains and monthly traffic. No public API fee verified.",
+        "checkedAt": "2026-11-13T07:20:14.168959+00:00",
+        "observationMethod": "Official page content read via web tool; separate anonymous Python HTTP result in httpProbes, which may return403"
+      },
+      {
+        "url": "https://tps.thetrainline.com/our-products/global-api/",
+        "finding": "European rail API, delay/disruption/platform realtime, bookings, aftersales, discount-card features; provider reports average integration 12 weeks. No public price verified.",
+        "checkedAt": "2026-11-13T07:20:14.168963+00:00",
+        "observationMethod": "Official page content read via web tool; separate anonymous Python HTTP result in httpProbes, which may return403"
+      },
+      {
+        "url": "https://duffel.com/pricing",
+        "finding": "USD prices observed: 3 per confirmed order, Managed Content 1% of order value, 2 per paid ancillary, 0.005 per excess search beyond 1500:1 search/order, FX2%. These fees are not an unlimited search licence.",
+        "checkedAt": "2026-11-13T07:20:14.168972+00:00",
+        "observationMethod": "Official page content read via web tool; separate anonymous Python HTTP result in httpProbes, which may return403"
+      },
+      {
+        "url": "https://duffel.com/services-agreement",
+        "finding": "Terms last updated 2026-06-17 prohibit metasearch use. Unmodified planner comparison model should not assume permission.",
+        "checkedAt": "2026-11-13T07:20:14.168976+00:00",
+        "observationMethod": "Official page content read via web tool; separate anonymous Python HTTP result in httpProbes, which may return403"
+      },
+      {
+        "url": "https://www.directferriesconnect.com/connect",
+        "finding": "Connect REST API for ferry ticket inventory; free partner signup advertised, but API production commercial terms and prices not publicly verified.",
+        "checkedAt": "2026-11-13T07:20:14.168979+00:00",
+        "observationMethod": "Official page content read via web tool; separate anonymous Python HTTP result in httpProbes, which may return403"
+      }
+    ]
+  }
+}

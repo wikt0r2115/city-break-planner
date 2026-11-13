@@ -1,5 +1,10 @@
 # SOL-115 — weryfikacja źródeł danych
 
+Nowsze porównanie opcji rozkładów, routingu i API partnerskich:
+[SOL-123 — research z 13.11.2026](route-data-options.md), w tym rzeczywista
+próba połączeń kolejowych przez Transitous oraz GTFS POLREGIO/SKM.
+Poniższy raport zachowuje historyczny stan prób SOL-115.
+
 Sprawdzono **11 listopada 2026 r.** przez oficjalne strony i anonimowe odczyty
 HTTP. Dokładne czasy UTC, adresy żądań i skróty odpowiedzi zapisano w
 [`docs/evidence/`](evidence/). Nie zakładano kont, nie wysyłano wniosków ani
