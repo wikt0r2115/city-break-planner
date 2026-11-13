@@ -112,7 +112,7 @@ h1 em { font-family: Georgia, "Times New Roman", serif; color: #ac5236; font-wei
 .item-time { margin: 15px 0; }
 .item-time label { margin-bottom: 6px; font-size: 11px; }
 .item-time label small { font-weight: 400; }
-.item-time-row { display: flex; gap: 10px; align-items: center; }
+.item-time-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .item-time-row input { max-width: 240px; font-size: 12px; padding: 9px; }
 .text-button { background: transparent; color: #365c42; font-size: 11px; padding: 8px 4px; min-height: 38px; text-align: left; }
 .text-button:hover:enabled { text-decoration: underline; }

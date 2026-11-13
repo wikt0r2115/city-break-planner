@@ -10,6 +10,22 @@ export const result: SearchResult = { searchId: 'test-search', criteria, status:
 export function planFor(input?: PlanInput): Plan {
   const trip = input?.selectedRoundTrip || regularTrip;
   const items: ItemInput[] = input?.items || [{ id: 'test-item', attractionId: 'test-museum', startsAt: '2099-12-06T11:00:00+01:00', visitMinutes: 90 }];
-  return { id: null, criteria: input?.criteria || criteria, selectedRoundTrip: trip, items: items.map((item, index) => ({ id: item.id, attractionId: item.attractionId, name: attractions.find((attraction) => attraction.id === item.attractionId)!.name, startsAt: item.startsAt || `2099-12-06T${index ? '14' : '11'}:00:00+01:00`, endsAt: new Date(new Date(item.startsAt || `2099-12-06T${index ? '14' : '11'}:00:00+01:00`).getTime() + item.visitMinutes * 60000).toISOString(), transferMinutesFromPrevious: 20, conflicts: trip.id === earlyTrip.id ? [{ code: 'RETURN_DEPARTURE', reason: 'Nie zdążysz na wcześniejszy powrót po tej wizycie.', itemId: item.id }] : [] })), costSummary: trip.costSummary, createdAt: null, updatedAt: null, testData: true };
+  const scheduled = items.map((item, index) => {
+    const startsAt = item.startsAt ?? `2099-12-06T${index ? '14' : '11'}:00:00+01:00`;
+    return {
+      id: item.id,
+      attractionId: item.attractionId,
+      name: attractions.find((attraction) => attraction.id === item.attractionId)!.name,
+      startsAt,
+      endsAt: new Date(new Date(startsAt).getTime() + item.visitMinutes * 60000).toISOString(),
+      transferMinutesFromPrevious: 20,
+      conflicts: trip.id === earlyTrip.id ? [{ code: 'RETURN_DEPARTURE', reason: 'Nie zdążysz na wcześniejszy powrót po tej wizycie.', itemId: item.id }] : [],
+      automaticTime: input ? (item.automaticTime ?? item.startsAt === null) : undefined,
+    };
+  });
+  return {
+    id: null, criteria: input?.criteria || criteria, selectedRoundTrip: trip, items: scheduled,
+    costSummary: trip.costSummary, createdAt: null, updatedAt: null, testData: true,
+  };
 }
 export const savedPlan: Plan = { ...planFor(), id: 'saved-test', shareUrl: 'http://localhost:5173/shared/test-public-token', createdAt: '2099-12-01T10:00:00Z', updatedAt: '2099-12-01T10:00:00Z' };

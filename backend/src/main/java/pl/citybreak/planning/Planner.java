@@ -69,7 +69,9 @@ public class Planner {
             if (toReturn == null) add(conflicts, ConflictCode.MISSING_DATA, "Brak potwierdzonego czasu dojazdu na powrót.", input.id());
             if (end.plusMinutes(toReturn == null ? 0 : toReturn).isAfter(trip.returnJourney().departureAt()))
                 add(conflicts, ConflictCode.RETURN_DEPARTURE, "Wizyta wraz z dojazdem kończy się po odjeździe powrotnym.", input.id());
-            result.add(new PlanItem(input.id(), input.attractionId(), attraction.name(), start, end, transfer, List.copyOf(conflicts)));
+            boolean automaticTime = input.startsAt() == null || Boolean.TRUE.equals(input.automaticTime());
+            result.add(new PlanItem(input.id(), input.attractionId(), attraction.name(), start, end, transfer,
+                    List.copyOf(conflicts), automaticTime));
             if (end.isAfter(previousEnd)) previousEnd = end;
             previousPlace = attraction.location();
         }

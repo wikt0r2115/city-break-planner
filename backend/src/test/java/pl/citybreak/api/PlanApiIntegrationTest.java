@@ -1,6 +1,7 @@
 package pl.citybreak.api;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.hamcrest.Matchers.contains;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -19,6 +20,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import pl.citybreak.persistence.PlanRepository;
 
 @SpringBootTest(properties = {"app.data-mode=demo", "app.frontend-base-url=http://localhost:5173", "app.cors.allowed-origins=http://localhost:5173"})
@@ -109,15 +111,74 @@ class PlanApiIntegrationTest {
         items.addObject().put("id", "gallery").put("attractionId", "demo-gallery").putNull("startsAt").put("visitMinutes", 60);
         JsonNode created = create(input);
         JsonNode savedItems = created.at("/plan/items");
-        for (int i = 0; i < items.size(); i++) ((ObjectNode) items.get(i)).put("startsAt", savedItems.get(i).get("startsAt").asText());
+        for (int i = 0; i < items.size(); i++) {
+            ((ObjectNode) items.get(i)).put("startsAt", savedItems.get(i).get("startsAt").asText())
+                    .put("automaticTime", savedItems.get(i).get("automaticTime").asBoolean());
+        }
         input.set("selectedRoundTrip", option("demo-early"));
         String id = created.at("/plan/id").asText();
-        mvc.perform(put("/api/v1/plans/" + id).header("Authorization", "Bearer " + created.get("ownerToken").asText())
+        JsonNode shortened = readResponse(mvc.perform(put("/api/v1/plans/" + id).header("Authorization", "Bearer " + created.get("ownerToken").asText())
                         .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsBytes(input)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.items.length()").value(2))
                 .andExpect(jsonPath("$.items[0].id").value("museum"))
                 .andExpect(jsonPath("$.items[1].id").value("gallery"))
-                .andExpect(jsonPath("$.items[1].conflicts[0].code").value("RETURN_DEPARTURE"));
+                .andExpect(jsonPath("$.items[1].automaticTime").value(true))
+                .andExpect(jsonPath("$.items[1].conflicts[0].code").value("RETURN_DEPARTURE")));
+        assertThat(visitStart(shortened.at("/items/1"))).isEqualTo(visitStart(savedItems.get(1)));
+    }
+    @Test void reorderedAutomaticVisitsRescheduleAndManualVisitsStayFixedAcrossReloads() throws Exception {
+        ObjectNode input = input("demo-long");
+        var initialItems = input.putArray("items");
+        var museum = initialItems.addObject().put("id", "museum").put("attractionId", "demo-museum")
+                .putNull("startsAt").put("visitMinutes", 90).put("automaticTime", true);
+        var park = initialItems.addObject().put("id", "park").put("attractionId", "demo-park")
+                .putNull("startsAt").put("visitMinutes", 45);
+        JsonNode created = create(input);
+        JsonNode original = created.at("/plan/items");
+        assertThat(localVisitTime(original.get(0))).isEqualTo(LocalTime.of(9, 15));
+        assertThat(localVisitTime(original.get(1))).isEqualTo(LocalTime.of(11, 0));
+        String id = created.at("/plan/id").asText();
+        String owner = "Bearer " + created.get("ownerToken").asText();
+
+        input.putArray("items").add(park).add(museum);
+        JsonNode reordered = readResponse(mvc.perform(put("/api/v1/plans/" + id).header("Authorization", owner)
+                        .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsBytes(input)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[*].id").value(contains("park", "museum")))
+                .andExpect(jsonPath("$.items[*].automaticTime").value(contains(true, true)))
+                .andExpect(jsonPath("$.items[0].conflicts").isEmpty())
+                .andExpect(jsonPath("$.items[1].conflicts").isEmpty()));
+        assertThat(localVisitTime(reordered.at("/items/0"))).isEqualTo(LocalTime.of(9, 15));
+        assertThat(localVisitTime(reordered.at("/items/1"))).isEqualTo(LocalTime.of(10, 15));
+
+        String fixedStart = reordered.at("/items/0/startsAt").asText();
+        park.put("startsAt", fixedStart).put("automaticTime", false);
+        input.putArray("items").add(museum).add(park);
+        JsonNode withManualTime = readResponse(mvc.perform(put("/api/v1/plans/" + id).header("Authorization", owner)
+                        .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsBytes(input)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[*].id").value(contains("museum", "park")))
+                .andExpect(jsonPath("$.items[1].conflicts[0].code").value("TRANSFER_TIME")));
+        assertThat(visitStart(withManualTime.at("/items/1"))).isEqualTo(visitStart(reordered.at("/items/0")));
+        String savedFixedStart = withManualTime.at("/items/1/startsAt").asText();
+        mvc.perform(get("/api/v1/plans/" + id).header("Authorization", owner))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[*].automaticTime").value(contains(true, false)))
+                .andExpect(jsonPath("$.items[1].startsAt").value(savedFixedStart));
+        mvc.perform(get("/api/v1/shared-plans/" + share(created)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[*].automaticTime").value(contains(true, false)))
+                .andExpect(jsonPath("$.items[1].startsAt").value(savedFixedStart));
+
+        String payload = jdbc.queryForObject("SELECT payload FROM plans WHERE id = ?", String.class, id);
+        JsonNode legacySnapshot = json.readTree(payload);
+        legacySnapshot.get("items").forEach(item -> ((ObjectNode) item).remove("automaticTime"));
+        jdbc.update("UPDATE plans SET payload = ? WHERE id = ?", json.writeValueAsString(legacySnapshot), id);
+        JsonNode legacy = readResponse(mvc.perform(get("/api/v1/plans/" + id).header("Authorization", owner))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[*].automaticTime").value(contains(false, false))));
+        assertThat(visitStart(legacy.at("/items/0"))).isEqualTo(visitStart(legacySnapshot.at("/items/0")));
+        assertThat(visitStart(legacy.at("/items/1"))).isEqualTo(visitStart(legacySnapshot.at("/items/1")));
     }
     @Test void malformedDatesEnumsTimezonesAndDurationsUseProblemDetails() throws Exception {
         ObjectNode input = input("demo-budget");
@@ -194,6 +255,15 @@ class PlanApiIntegrationTest {
     private String share(JsonNode created) {
         String url = created.at("/plan/shareUrl").asText();
         return url.substring(url.lastIndexOf('/') + 1);
+    }
+    private LocalTime localVisitTime(JsonNode item) {
+        return visitStart(item).atZone(ZoneId.of("Europe/Warsaw")).toLocalTime();
+    }
+    private Instant visitStart(JsonNode item) {
+        return OffsetDateTime.parse(item.get("startsAt").asText()).toInstant();
+    }
+    private JsonNode readResponse(ResultActions response) throws Exception {
+        return json.readTree(response.andReturn().getResponse().getContentAsString());
     }
     private static Path database() {
         try {

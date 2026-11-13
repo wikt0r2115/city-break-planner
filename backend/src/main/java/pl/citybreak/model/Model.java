@@ -52,11 +52,17 @@ public final class Model {
     public record SearchResponse(String searchId, Criteria criteria, SearchStatus status,
             List<RoundTrip> roundTripOptions, List<Attraction> attractions,
             List<Source> sources, boolean testData) {}
-    public record ItemInput(String id, String attractionId, OffsetDateTime startsAt, Integer visitMinutes) {}
+    public record ItemInput(String id, String attractionId, OffsetDateTime startsAt, Integer visitMinutes,
+            Boolean automaticTime) {
+        public ItemInput(String id, String attractionId, OffsetDateTime startsAt, Integer visitMinutes) {
+            this(id, attractionId, startsAt, visitMinutes, null);
+        }
+    }
     public record PlanInput(Criteria criteria, RoundTrip selectedRoundTrip, List<ItemInput> items) {}
     public record Conflict(ConflictCode code, String reason, String itemId) {}
     public record PlanItem(String id, String attractionId, String name, OffsetDateTime startsAt,
-            OffsetDateTime endsAt, Integer transferMinutesFromPrevious, List<Conflict> conflicts) {}
+            OffsetDateTime endsAt, Integer transferMinutesFromPrevious, List<Conflict> conflicts,
+            boolean automaticTime) {}
     public record Plan(String id, Criteria criteria, RoundTrip selectedRoundTrip, List<PlanItem> items,
             CostSummary costSummary, OffsetDateTime createdAt, OffsetDateTime updatedAt,
             boolean testData, @JsonInclude(JsonInclude.Include.NON_NULL) String shareUrl) {}

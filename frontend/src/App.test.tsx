@@ -95,6 +95,42 @@ describe('wyszukiwanie i planowanie z API', () => {
     expect(create).toBeDefined(); expect(JSON.parse(String(create?.[1]?.body)).items[0].attractionId).toBe('test-gallery');
   });
 
+  it('po zmianie kolejności przelicza godziny automatyczne i zachowuje godzinę ręczną', async () => {
+    const { previews } = mockApi();
+    render(<App />);
+    await startPlan();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dodaj: Galeria testowa' }));
+    const moveGallery = await screen.findByRole('button', { name: 'Przesuń Galeria testowa wcześniej' });
+    await waitFor(() => expect(moveGallery).toBeEnabled());
+    fireEvent.click(moveGallery);
+    await waitFor(() => expect(previews.at(-1)?.items).toEqual([
+      expect.objectContaining({ attractionId: 'test-gallery', startsAt: null, automaticTime: true }),
+      expect.objectContaining({ attractionId: 'test-museum', startsAt: null, automaticTime: true }),
+    ]));
+    const galleryTime = screen.getByLabelText(/Początek wizyty Galeria testowa/);
+    const museumTime = screen.getByLabelText(/Początek wizyty Muzeum testowe/);
+    await waitFor(() => expect(galleryTime).toHaveValue('2099-12-06T11:00'));
+    expect(museumTime).toHaveValue('2099-12-06T14:00');
+
+    fireEvent.change(museumTime, { target: { value: '2099-12-06T15:00' } });
+    const museum = museumTime.closest('li')!;
+    fireEvent.click(within(museum).getByRole('button', { name: 'Ustaw ręcznie' }));
+    const resetToAutomatic = await within(museum).findByRole('button', { name: 'Ustaw automatycznie' });
+    const moveMuseum = within(museum).getByRole('button', { name: 'Przesuń Muzeum testowe wcześniej' });
+    await waitFor(() => expect(moveMuseum).toBeEnabled());
+    fireEvent.click(moveMuseum);
+    await waitFor(() => expect(previews.at(-1)?.items).toEqual([
+      expect.objectContaining({ attractionId: 'test-museum', startsAt: '2099-12-06T14:00:00.000Z', automaticTime: false }),
+      expect.objectContaining({ attractionId: 'test-gallery', startsAt: null, automaticTime: true }),
+    ]));
+    expect(museumTime).toHaveValue('2099-12-06T15:00');
+    await waitFor(() => expect(resetToAutomatic).toBeEnabled());
+    fireEvent.click(resetToAutomatic);
+    await waitFor(() => expect(museumTime).toHaveValue('2099-12-06T11:00'));
+    expect(previews.at(-1)?.items[0]).toEqual(expect.objectContaining({ startsAt: null, automaticTime: true }));
+  });
+
   it('otwiera zapisany plan z uprawnieniem właściciela i odświeża katalog bez nadpisania punktów', async () => {
     const { fetch, previews } = mockApi(); localStorage.setItem('city-break-owner:saved-test', 'private-test-owner-token');
     window.history.replaceState({}, '', '/plans/saved-test'); render(<App />);

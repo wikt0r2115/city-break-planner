@@ -140,10 +140,14 @@ Nieznane godziny nie potwierdzają dostępności atrakcji.
 Żądanie utworzenia/aktualizacji: `criteria` (jak wyszukiwanie),
 `selectedRoundTrip` (pełny wariant), `items[]`.
 Element wejściowy: `id` (stabilny, nadany przez klienta), `attractionId`,
-`startsAt` (RFC3339 albo null dla nowo dodanego punktu), `visitMinutes`.
-Dla null serwer wybiera najwcześniejszy możliwy termin, uwzględniając
-poprzedni punkt, godziny otwarcia i dojazdy. Po pierwszym przeliczeniu klient
-przesyła otrzymany termin, aby zmiana powrotu zachowała wybory użytkownika.
+`startsAt` (RFC3339 albo null), `visitMinutes` oraz opcjonalne `automaticTime`
+(boolean). Dla null serwer wybiera najwcześniejszy możliwy termin, uwzględniając
+poprzedni punkt, godziny otwarcia i dojazdy. Klient wysyła null przy dodaniu
+punktu i dla automatycznych punktów po zmianie kolejności. Gdy klient przesyła
+konkretną godzinę z `automaticTime: true`, serwer zachowuje tę godzinę i tryb
+automatyczny przy zmianie powrotu lub zapisie. `automaticTime: false` wymaga
+podania godziny ustawionej ręcznie. Bez pola `automaticTime` tryb wynika
+z wartości `startsAt`: null oznacza tryb automatyczny, godzina oznacza ręczny.
 Serwer weryfikuje oferty i ceny po swojej stronie,
 oblicza godziny końca, dojazdy, konflikty i sumę; nie ufa sumom klienta.
 
@@ -158,7 +162,9 @@ Publiczne DTO nie zawiera tokenów, linku właściciela ani poświadczeń.
 `ownerToken` zwracany jest tylko przy utworzeniu i nie znajduje się w obiekcie planu.
 
 Element wynikowy: `id`, `attractionId`, `name`, `startsAt`, `endsAt`,
-`transferMinutesFromPrevious` (minuty lub null przy braku danych), `conflicts[]`.
+`transferMinutesFromPrevious` (minuty lub null przy braku danych), `conflicts[]`
+oraz `automaticTime` (boolean). Starsze zapisy bez `automaticTime` zachowują
+godziny i są odczytywane w trybie ręcznym.
 Konflikt: `code`, `reason` (czytelny komunikat), `itemId`.
 Kody: `RETURN_DEPARTURE` (z dojazdem na powrót), `OPENING_HOURS`,
 `TRANSFER_TIME`, `MISSING_DATA`.

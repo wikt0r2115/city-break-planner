@@ -58,6 +58,8 @@ public class InputValidation {
                 if (blank(item.attractionId())) errors.add(new FieldError(field + ".attractionId", "Wybierz atrakcję."));
                 if (item.visitMinutes() == null || item.visitMinutes() < 1 || item.visitMinutes() > 1440)
                     errors.add(new FieldError(field + ".visitMinutes", "Wizyta musi trwać od 1 do 1440 minut."));
+                if (Boolean.FALSE.equals(item.automaticTime()) && item.startsAt() == null)
+                    errors.add(new FieldError(field + ".startsAt", "Podaj godzinę wizyty ustawianą ręcznie."));
             }
         }
         if (!errors.isEmpty()) fail(errors);
