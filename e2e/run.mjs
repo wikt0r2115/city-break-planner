@@ -32,13 +32,16 @@ try {
   let expectedNames;
 
   await check('demo example fills editable route fields without searching', async () => {
-    await page.goto(app.url);
-    await page.getByRole('button', { name: 'Uzupełnij przykładową trasę' }).click();
-    assert.equal(await page.locator('#origin').inputValue(), 'Warszawa');
-    assert.equal(await page.locator('#destination').inputValue(), 'Gdańsk');
-    assert.equal(await page.locator('#departureDate').inputValue(), futureDate(1));
-    assert.equal(await page.locator('#returnDate').inputValue(), futureDate(2));
-    assert.equal(await page.locator('.trip-card').count(), 0);
+    const samplePage = await context.newPage();
+    try {
+      await samplePage.goto(app.url);
+      await samplePage.getByRole('button', { name: 'Uzupełnij przykładową trasę' }).click();
+      assert.equal(await samplePage.locator('#origin').inputValue(), 'Warszawa');
+      assert.equal(await samplePage.locator('#destination').inputValue(), 'Gdańsk');
+      assert.equal(await samplePage.locator('#departureDate').inputValue(), futureDate(1));
+      assert.equal(await samplePage.locator('#returnDate').inputValue(), futureDate(2));
+      assert.equal(await samplePage.locator('.trip-card').count(), 0);
+    } finally { await samplePage.close(); }
   });
 
   await check('place suggestions support touch and keyboard on a narrow screen', async () => {
@@ -66,6 +69,7 @@ try {
 
   await check('keyboard search, actual HTTP/CORS and explicit test-data labels', async () => {
     await page.goto(app.url);
+    await page.bringToFront();
     await page.keyboard.press('Tab');
     assert.equal(await page.locator(':focus').textContent(), 'Przejdź do treści');
     await page.locator('#origin').focus();

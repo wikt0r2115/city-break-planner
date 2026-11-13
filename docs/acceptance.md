@@ -142,7 +142,21 @@ Java/Vite; SIGTERM podczas startu backendu również nie pozostawił procesu.
   Usunięto mylne rozpoznanie innego dnia rozkładu jako braku kursów oraz
   możliwość pozostawienia procesów po przerwaniu startu nagrania.
 
-Wynik dotyczy zatwierdzonego etapu lokalnego; szerszy zakres źródeł ma
-zostać doprecyzowany w dalszym etapie projektu. Nie sprawdzono Windows,
-fizycznego telefonu, czytnika ekranu, innych silników przeglądarki, zakupu
-biletu, hostingu ani źródeł kolejowych/lotniczych/autokarowych.
+### Odbiór Windows PowerShell — 13.11.2026
+
+- Świeży lokalny klon rewizji `f4d30dd`, JDK 21.0.10, Node 22.22.2 i Edge.
+  `mvnw.cmd package` z osobnym katalogiem tymczasowym zakończył się wynikiem
+  **57/57 testów PASS**. `npm.cmd ci` i build przeszły, a zestaw frontendu
+  na tej samej wersji kodu zakończył się wynikiem **27/27 PASS**.
+- Zestaw demo w Edge przeszedł **12/12 grup**, w tym uzupełnienie przykładowej
+  trasy, podpowiedzi z klawiaturą i emulowanym dotykiem przy 360 px,
+  paginację, zmianę powrotu, zapis, restart i publiczny odczyt. Przed
+  ponowieniem testu doprecyzowano izolację kart przeglądarki w zestawie E2E.
+- Test `live` dla **14.11.2026** zwrócił **24 warianty** rozkładu linii 100.
+  Sprawdzono przykładową trasę w formularzu, taryfy w API i widok mobilny.
+- Scenariusze uruchomiono bezpośrednio przez Javę i Vite. Weryfikacja Docker
+  Compose pozostaje udokumentowana dla [Linuksa](docker.md).
+
+Wyniki dotyczą zatwierdzonego zakresu danych w Gdańsku. Fizyczny telefon,
+czytnik ekranu, inne silniki przeglądarki, zakup biletu, hosting i źródła
+kolejowe, lotnicze oraz autokarowe pozostają poza tym odbiorem.
