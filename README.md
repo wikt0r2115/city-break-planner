@@ -243,8 +243,6 @@ priorytety oraz konflikty harmonogramu. Testy frontendu używają kontrolowanych
 odpowiedzi API do sprawdzenia wyszukiwania, edytora i widoku publicznego.
 Build sprawdza TypeScript i tworzy `dist/`.
 Backend i Vite muszą działać jednocześnie, aby ręcznie sprawdzić pełne połączenie.
-W Windows użyj `mvnw.cmd` zamiast `./mvnw`; eksport zmiennych dostosuj do powłoki.
-
 ### Uruchomienie w Windows PowerShell
 
 Z katalogu repozytorium uruchom backend w pierwszym terminalu. Aby sprawdzić
