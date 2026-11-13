@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { ApiError, clearOwnerToken, createPlan, deletePlan, getPlan, getSharedPlan, previewPlan, readOwnerToken, saveOwnerToken, searchTrips, updatePlan } from './api';
+import { ApiError, clearOwnerToken, createPlan, deletePlan, getPlaceCatalog, getPlan, getSharedPlan, previewPlan, readOwnerToken, saveOwnerToken, searchTrips, updatePlan } from './api';
 import { Cost, ExternalLink, Prices, ReadOnlyPlan, TestBanner } from './components';
 import { TripResults } from './TripResults';
 import { dateInWarsaw, duration, fromWarsawInput, itemsFromPlan, moment, nextDate, safeUrl, warsawInput } from './format';
-import type { Attraction, Criteria, ItemInput, Plan, Priority, RoundTrip, SearchResult } from './types';
+import type { Attraction, Criteria, ItemInput, PlaceCatalog, Plan, Priority, RoundTrip, SearchResult } from './types';
+import { PlaceField } from './PlaceField';
 
 const priorities: { value: Priority; title: string; detail: string }[] = [
   { value: 'LOWEST_TOTAL_COST', title: 'Niższy koszt', detail: 'Przejazdy i bilety wstępu' },
@@ -53,6 +54,8 @@ export default function App() {
 
 function Planner({ ownerId, onSaved }: { ownerId: string | null; onSaved: (id: string) => void }) {
   const [criteria, setCriteria] = useState<Criteria>(initialCriteria);
+  const [placeCatalog, setPlaceCatalog] = useState<PlaceCatalog | null>(null);
+  const [placeCatalogError, setPlaceCatalogError] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [result, setResult] = useState<SearchResult | null>(null);
   const [plan, setPlan] = useState<Plan | null>(null);
@@ -64,6 +67,14 @@ function Planner({ ownerId, onSaved }: { ownerId: string | null; onSaved: (id: s
   const [deleting, setDeleting] = useState(false);
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getPlaceCatalog(controller.signal)
+      .then((catalog) => { if (!controller.signal.aborted) setPlaceCatalog(catalog); })
+      .catch(() => { if (!controller.signal.aborted) setPlaceCatalogError(true); });
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => {
     if (!ownerId) return;
@@ -185,8 +196,8 @@ function Planner({ ownerId, onSaved }: { ownerId: string | null; onSaved: (id: s
     <section className="panel search-panel" aria-labelledby="search-title"><div className="section-heading"><div><p className="eyebrow">01 / KIERUNEK</p><h2 id="search-title">Dokąd tym razem?</h2></div><span className="small-note">Plan na Twój rytm i budżet</span></div>
       <p className="coverage-note">Dane rzeczywiste w tym etapie: linia 100 w Gdańsku, Dworzec Główny ↔ Targ Rybny, w zakresie dat opublikowanym przez ZTM. Pozostałe trasy są w przygotowaniu.</p>
       <form onSubmit={handleSearch} noValidate><fieldset disabled={!!busy} className="unframed"><legend className="sr-only">Szczegóły wyjazdu</legend><div className="form-grid">
-        <Field id="origin" label="Miejsce startu" value={criteria.origin} error={fieldErrors.origin} onChange={(value) => setField('origin', value)} placeholder="np. Dworzec Główny" />
-        <Field id="destination" label="Cel podróży" value={criteria.destination} error={fieldErrors.destination} onChange={(value) => setField('destination', value)} placeholder="np. Targ Rybny" />
+        <PlaceField id="origin" label="Miejsce startu" value={criteria.origin} otherValue={criteria.destination} error={fieldErrors.origin} onChange={(value) => setField('origin', value)} placeholder="np. Dworzec Główny" catalog={placeCatalog} catalogError={placeCatalogError} disabled={!!busy} />
+        <PlaceField id="destination" label="Cel podróży" value={criteria.destination} otherValue={criteria.origin} error={fieldErrors.destination} onChange={(value) => setField('destination', value)} placeholder="np. Targ Rybny" catalog={placeCatalog} catalogError={placeCatalogError} disabled={!!busy} />
         <Field id="departureDate" label="Data wyjazdu" type="date" value={criteria.departureDate} min={dateInWarsaw()} error={fieldErrors.departureDate} onChange={(value) => setField('departureDate', value)} />
         <Field id="returnDate" label="Data powrotu" type="date" value={criteria.returnDate} min={criteria.departureDate || dateInWarsaw()} error={fieldErrors.returnDate} onChange={(value) => setField('returnDate', value)} />
       </div><fieldset className="priority-picker"><legend>Co jest dla Ciebie najważniejsze?</legend><div className="priority-options">{priorities.map((priority) => <label key={priority.value} className={`priority-option ${criteria.priority === priority.value ? 'selected' : ''}`}><input type="radio" name="priority" value={priority.value} checked={criteria.priority === priority.value} onChange={() => setField('priority', priority.value)} /><span><strong>{priority.title}</strong><small>{priority.detail}</small></span></label>)}</div></fieldset><div className="search-actions"><label className="fare-select">Porównuj taryfę<select value={criteria.fareType} onChange={(event) => setField('fareType', event.target.value)}><option value="STANDARD">Normalną</option><option value="REDUCED">Ulgową, jeśli potwierdzona</option></select></label><button className="primary-button" type="submit">Znajdź połączenia <span aria-hidden="true">↗</span></button></div></fieldset></form>

@@ -17,6 +17,7 @@ function fillSearch() {
 function mockApi() {
   const previews: PlanInput[] = [];
   const fetch = vi.fn(async (url: string, options: RequestInit = {}) => {
+    if (url.endsWith('/places')) return json({ places: [], testData: true });
     if (url.endsWith('/searches')) return json(result);
     if (url.endsWith('/plans/preview')) { const input = JSON.parse(String(options.body)) as PlanInput; previews.push(input); return json(planFor(input)); }
     if (url.endsWith('/plans') && options.method === 'POST') { const input = JSON.parse(String(options.body)) as PlanInput; return json({ plan: { ...planFor(input), id: savedPlan.id, shareUrl: savedPlan.shareUrl }, ownerToken: 'private-test-owner-token' }, 201); }
@@ -31,15 +32,17 @@ function mockApi() {
 async function startPlan() { fillSearch(); fireEvent.click(screen.getByRole('button', { name: /Znajdź połączenia/ })); await screen.findByRole('heading', { name: 'Twój plan zwiedzania' }); await waitFor(() => expect(screen.getByRole('button', { name: /Zapisz plan/ })).toBeEnabled()); }
 
 describe('wyszukiwanie i planowanie z API', () => {
-  it('waliduje pola i daty, ustawia komunikaty przy polach i fokus bez wywołania API', () => {
-    const fetch = vi.fn(); vi.stubGlobal('fetch', fetch); render(<App />);
+  it('waliduje pola i daty, ustawia komunikaty przy polach i fokus bez wyszukiwania połączeń', async () => {
+    const { fetch } = mockApi();
+    await act(async () => { render(<App />); });
     fireEvent.click(screen.getByRole('button', { name: /Znajdź połączenia/ }));
     expect(screen.getByText('Wpisz miejsce startu.')).toBeInTheDocument();
     expect(screen.getByLabelText('Miejsce startu')).toHaveAttribute('aria-invalid', 'true');
     expect(screen.getByLabelText('Miejsce startu')).toHaveFocus();
     fillSearch(); fireEvent.change(screen.getByLabelText('Data powrotu'), { target: { value: '2099-12-04' } });
     fireEvent.click(screen.getByRole('button', { name: /Znajdź połączenia/ }));
-    expect(screen.getByText('Powrót nie może poprzedzać wyjazdu.')).toBeInTheDocument(); expect(fetch).not.toHaveBeenCalled();
+    expect(screen.getByText('Powrót nie może poprzedzać wyjazdu.')).toBeInTheDocument();
+    expect(fetch.mock.calls.some(([url]) => url.endsWith('/searches'))).toBe(false);
   });
 
   it('wysyła pojedynczy wybrany priorytet, pokazuje taryfy i wyraźnie oznacza dane testowe', async () => {
@@ -47,8 +50,8 @@ describe('wyszukiwanie i planowanie z API', () => {
     fireEvent.click(screen.getByRole('radio', { name: /Krótszy dojazd/ }));
     fireEvent.click(screen.getByRole('button', { name: /Znajdź połączenia/ }));
     await screen.findByRole('heading', { name: 'Twój plan zwiedzania' });
-    expect(fetch.mock.calls[0][0]).toBe('http://localhost:8080/api/v1/searches');
-    expect(JSON.parse(String(fetch.mock.calls[0][1]?.body)).priority).toBe('SHORTEST_TRAVEL_TIME');
+    const search = fetch.mock.calls.find(([url]) => url === 'http://localhost:8080/api/v1/searches');
+    expect(JSON.parse(String(search?.[1]?.body)).priority).toBe('SHORTEST_TRAVEL_TIME');
     expect(screen.getByText('Dane testowe — to nie są rzeczywiste oferty.')).toBeInTheDocument();
     expect(screen.getAllByText('Ulgowa:', { exact: false }).length).toBeGreaterThan(0);
     expect(screen.queryByText('Testowa ulga dla studentów.', { exact: false })).not.toBeInTheDocument();
@@ -61,7 +64,9 @@ describe('wyszukiwanie i planowanie z API', () => {
     ['NO_CONNECTION', 'Brak potwierdzonych połączeń'],
     ['PROVIDER_ERROR', 'Nie udało się sprawdzić połączeń'],
   ])('rozróżnia stan %s', async (status, heading) => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json({ ...result, status, roundTripOptions: [], testData: false })));
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => url.endsWith('/places')
+      ? json({ places: [], testData: false })
+      : json({ ...result, status, roundTripOptions: [], testData: false })));
     render(<App />); fillSearch(); fireEvent.click(screen.getByRole('button', { name: /Znajdź połączenia/ }));
     expect(await screen.findByRole('heading', { name: heading })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Twój plan zwiedzania' })).not.toBeInTheDocument();
@@ -136,7 +141,8 @@ describe('wyszukiwanie i planowanie z API', () => {
     const { fetch, previews } = mockApi(); localStorage.setItem('city-break-owner:saved-test', 'private-test-owner-token');
     window.history.replaceState({}, '', '/plans/saved-test'); render(<App />);
     await screen.findByRole('heading', { name: 'Twój plan zwiedzania' });
-    expect(fetch.mock.calls[0][1]?.headers).toEqual(expect.objectContaining({ Authorization: 'Bearer private-test-owner-token' }));
+    const read = fetch.mock.calls.find(([url, options]) => url.endsWith('/plans/saved-test') && options?.method === 'GET');
+    expect(read?.[1]?.headers).toEqual(expect.objectContaining({ Authorization: 'Bearer private-test-owner-token' }));
     expect(screen.getByRole('button', { name: 'Usuń Muzeum testowe' })).toBeInTheDocument();
     expect(previews).toHaveLength(0);
     expect(screen.getByRole('button', { name: /Zapisz zmiany/ })).toBeDisabled();
@@ -198,13 +204,14 @@ describe('wyszukiwanie i planowanie z API', () => {
   });
 
   it('po utracie połączenia zachowuje czytelny błąd i pozwala ponowić wyszukiwanie', async () => {
-    const fetch = vi.fn().mockRejectedValueOnce(new TypeError('offline')).mockResolvedValueOnce(json({ ...result, status: 'NO_CONNECTION', roundTripOptions: [] }));
+    const search = vi.fn().mockRejectedValueOnce(new TypeError('offline')).mockResolvedValueOnce(json({ ...result, status: 'NO_CONNECTION', roundTripOptions: [] }));
+    const fetch = vi.fn((url: string) => url.endsWith('/places') ? Promise.resolve(json({ places: [], testData: true })) : search());
     vi.stubGlobal('fetch', fetch); render(<App />); fillSearch();
     fireEvent.click(screen.getByRole('button', { name: /Znajdź połączenia/ }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Nie udało się połączyć');
     fireEvent.click(screen.getByRole('button', { name: /Znajdź połączenia/ }));
     await screen.findByRole('heading', { name: 'Brak potwierdzonych połączeń' });
-    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(search).toHaveBeenCalledTimes(2);
   });
 
   it('kończy wiszące żądanie i ponownie udostępnia przycisk wyszukiwania', async () => {

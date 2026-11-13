@@ -1,4 +1,4 @@
-import type { Criteria, Plan, PlanInput, SearchResult } from './types';
+import type { Criteria, PlaceCatalog, Plan, PlanInput, SearchResult } from './types';
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1').replace(/\/+$/, '');
 export const REQUEST_TIMEOUT_MS = 10000;
@@ -9,6 +9,10 @@ export class ApiError extends Error {
 function record(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null; }
 function isPlan(body: unknown): body is Plan { return record(body) && record(body.criteria) && record(body.selectedRoundTrip) && record(body.costSummary) && Array.isArray(body.items); }
 function isSearch(body: unknown): body is SearchResult { return record(body) && record(body.criteria) && ['OK', 'PARTIAL', 'NO_CONNECTION', 'PROVIDER_ERROR'].includes(String(body.status)) && Array.isArray(body.roundTripOptions) && Array.isArray(body.attractions) && Array.isArray(body.sources); }
+function isPlaceCatalog(body: unknown): body is PlaceCatalog {
+  return record(body) && typeof body.testData === 'boolean' && Array.isArray(body.places)
+    && body.places.every((place) => record(place) && typeof place.value === 'string' && typeof place.label === 'string');
+}
 
 async function request(path: string, method: string, body?: unknown, token?: string, signal?: AbortSignal): Promise<unknown> {
   const controller = new AbortController();
@@ -43,6 +47,11 @@ async function request(path: string, method: string, body?: unknown, token?: str
 }
 
 function expectPlan(body: unknown): Plan { if (!isPlan(body)) throw new ApiError('Aplikacja zwróciła nieprawidłową odpowiedź planu.'); return body; }
+export async function getPlaceCatalog(signal?: AbortSignal): Promise<PlaceCatalog> {
+  const body = await request('/places', 'GET', undefined, undefined, signal);
+  if (!isPlaceCatalog(body)) throw new ApiError('Aplikacja zwróciła nieprawidłowe podpowiedzi miejsc.');
+  return body;
+}
 export async function searchTrips(criteria: Criteria, signal?: AbortSignal): Promise<SearchResult> { const body = await request('/searches', 'POST', criteria, undefined, signal); if (!isSearch(body)) throw new ApiError('Aplikacja zwróciła nieprawidłową odpowiedź wyszukiwania.'); return body; }
 export async function previewPlan(input: PlanInput, signal?: AbortSignal): Promise<Plan> { return expectPlan(await request('/plans/preview', 'POST', input, undefined, signal)); }
 export async function createPlan(input: PlanInput): Promise<{ plan: Plan; ownerToken: string }> { const body = await request('/plans', 'POST', input); if (!record(body) || !isPlan(body.plan) || typeof body.ownerToken !== 'string' || !body.ownerToken) throw new ApiError('Aplikacja zwróciła nieprawidłowe potwierdzenie zapisu.'); return { plan: body.plan, ownerToken: body.ownerToken }; }
