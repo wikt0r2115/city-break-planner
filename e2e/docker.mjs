@@ -40,6 +40,13 @@ async function command(args, compose = true) {
     { cwd: root, env: environment, maxBuffer: 4 * 1024 * 1024, timeout: 900000 });
   activeCommand = operation.child;
   try { return await operation; }
+  catch (error) {
+    if (args.includes('build')) {
+      console.error(error.stdout || '');
+      console.error(error.stderr || '');
+    }
+    throw error;
+  }
   finally { activeCommand = undefined; }
 }
 
@@ -83,7 +90,7 @@ async function healthy() {
 try {
   await command(['config', '--quiet']);
   console.log('Building and starting an isolated Docker Compose project…');
-  await command(['build', '--pull', '--no-cache']);
+  await command(['--progress', 'plain', 'build', '--pull', '--no-cache']);
   await command(['up', '--no-build', '--detach', '--wait', '--wait-timeout', '180']);
   await healthy();
   for (const service of ['backend', 'frontend']) {
