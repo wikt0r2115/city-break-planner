@@ -41,6 +41,29 @@ try {
     assert.equal(await page.locator('.trip-card').count(), 0);
   });
 
+  await check('place suggestions support touch and keyboard on a narrow screen', async () => {
+    const mobile = await browser.newContext({ viewport: { width: 360, height: 780 }, isMobile: true, hasTouch: true });
+    try {
+      const searchPage = await mobile.newPage();
+      await searchPage.goto(app.url);
+      const origin = searchPage.getByRole('combobox', { name: 'Miejsce startu' });
+      const destination = searchPage.getByRole('combobox', { name: 'Cel podróży' });
+      await origin.fill('warsz');
+      await searchPage.getByRole('option', { name: /Warszawa/ }).tap();
+      assert.equal(await origin.inputValue(), 'Warszawa');
+      await destination.tap();
+      await searchPage.getByRole('option', { name: /Gdańsk/ }).waitFor();
+      assert.equal(await searchPage.getByRole('option', { name: /Warszawa/ }).count(), 0);
+      await destination.fill('gdansk');
+      await destination.press('ArrowDown');
+      await destination.press('Enter');
+      assert.equal(await destination.inputValue(), 'Gdańsk');
+      await searchPage.getByRole('button', { name: /Znajdź połączenia/ }).tap();
+      await searchPage.locator('.trip-card').first().waitFor();
+      assert.ok(await searchPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    } finally { await mobile.close(); }
+  });
+
   await check('keyboard search, actual HTTP/CORS and explicit test-data labels', async () => {
     await page.goto(app.url);
     await page.keyboard.press('Tab');

@@ -189,18 +189,35 @@ function Planner({ ownerId, onSaved }: { ownerId: string | null; onSaved: (id: s
     catch { setNotice('Nie udało się skopiować automatycznie. Zaznacz i skopiuj link poniżej.'); }
   }
   function setField(name: keyof Criteria, value: string) { setCriteria((current) => ({ ...current, [name]: value })); setFieldErrors((current) => ({ ...current, [name]: '' })); }
+  function fillExampleRoute() {
+    const departureDate = nextDate(1);
+    setCriteria((current) => ({
+      ...current,
+      origin: exampleMode ? 'Warszawa' : 'Dworzec Główny',
+      destination: exampleMode ? 'Gdańsk' : 'Targ Rybny',
+      departureDate,
+      returnDate: exampleMode ? nextDate(2) : departureDate,
+    }));
+    setFieldErrors({});
+    setError('');
+  }
+  const exampleMode = placeCatalog?.testData ?? result?.testData ?? false;
   const testData = result?.testData || plan?.testData;
   const canEdit = !busy;
 
   return <><section className="hero"><div><p className="eyebrow">NOWE MIEJSCA, TWÓJ RYTM</p><h1>Mały wyjazd.<br />Dużo <em>możliwości.</em></h1></div><p className="lead">Wybierz cel i to, na czym najbardziej Ci zależy. Połącz podróż i zwiedzanie w jeden własny plan.</p></section>
     <section className="panel search-panel" aria-labelledby="search-title"><div className="section-heading"><div><p className="eyebrow">01 / KIERUNEK</p><h2 id="search-title">Dokąd tym razem?</h2></div><span className="small-note">Plan na Twój rytm i budżet</span></div>
-      <p className="coverage-note">Dane rzeczywiste w tym etapie: linia 100 w Gdańsku, Dworzec Główny ↔ Targ Rybny, w zakresie dat opublikowanym przez ZTM. Pozostałe trasy są w przygotowaniu.</p>
+      <p className="coverage-note">{exampleMode
+        ? 'Tryb demo. Połączenia, ceny i atrakcje są przykładowe.'
+        : 'Dane rzeczywiste w tym etapie: linia 100 w Gdańsku, Dworzec Główny ↔ Targ Rybny, w zakresie dat opublikowanym przez ZTM.'}</p>
       <form onSubmit={handleSearch} noValidate><fieldset disabled={!!busy} className="unframed"><legend className="sr-only">Szczegóły wyjazdu</legend><div className="form-grid">
         <PlaceField id="origin" label="Miejsce startu" value={criteria.origin} otherValue={criteria.destination} error={fieldErrors.origin} onChange={(value) => setField('origin', value)} placeholder="np. Dworzec Główny" catalog={placeCatalog} catalogError={placeCatalogError} disabled={!!busy} />
         <PlaceField id="destination" label="Cel podróży" value={criteria.destination} otherValue={criteria.origin} error={fieldErrors.destination} onChange={(value) => setField('destination', value)} placeholder="np. Targ Rybny" catalog={placeCatalog} catalogError={placeCatalogError} disabled={!!busy} />
         <Field id="departureDate" label="Data wyjazdu" type="date" value={criteria.departureDate} min={dateInWarsaw()} error={fieldErrors.departureDate} onChange={(value) => setField('departureDate', value)} />
         <Field id="returnDate" label="Data powrotu" type="date" value={criteria.returnDate} min={criteria.departureDate || dateInWarsaw()} error={fieldErrors.returnDate} onChange={(value) => setField('returnDate', value)} />
-      </div><fieldset className="priority-picker"><legend>Co jest dla Ciebie najważniejsze?</legend><div className="priority-options">{priorities.map((priority) => <label key={priority.value} className={`priority-option ${criteria.priority === priority.value ? 'selected' : ''}`}><input type="radio" name="priority" value={priority.value} checked={criteria.priority === priority.value} onChange={() => setField('priority', priority.value)} /><span><strong>{priority.title}</strong><small>{priority.detail}</small></span></label>)}</div></fieldset><div className="search-actions"><label className="fare-select">Porównuj taryfę<select value={criteria.fareType} onChange={(event) => setField('fareType', event.target.value)}><option value="STANDARD">Normalną</option><option value="REDUCED">Ulgową, jeśli potwierdzona</option></select></label><button className="primary-button" type="submit">Znajdź połączenia <span aria-hidden="true">↗</span></button></div></fieldset></form>
+      </div>
+      <button type="button" className="text-button" disabled={!placeCatalog && !placeCatalogError} onClick={fillExampleRoute}>Uzupełnij przykładową trasę</button>
+      <fieldset className="priority-picker"><legend>Co jest dla Ciebie najważniejsze?</legend><div className="priority-options">{priorities.map((priority) => <label key={priority.value} className={`priority-option ${criteria.priority === priority.value ? 'selected' : ''}`}><input type="radio" name="priority" value={priority.value} checked={criteria.priority === priority.value} onChange={() => setField('priority', priority.value)} /><span><strong>{priority.title}</strong><small>{priority.detail}</small></span></label>)}</div></fieldset><div className="search-actions"><label className="fare-select">Porównuj taryfę<select value={criteria.fareType} onChange={(event) => setField('fareType', event.target.value)}><option value="STANDARD">Normalną</option><option value="REDUCED">Ulgową, jeśli potwierdzona</option></select></label><button className="primary-button" type="submit">Znajdź połączenia <span aria-hidden="true">↗</span></button></div></fieldset></form>
     </section>
     {busy && <p className="loading-message" role="status">{busy}</p>}{error && <div className="message error" role="alert">{error}</div>}{notice && <div className="message success" role="status">{notice}</div>}{testData && <TestBanner />}
     {result && <TripResults key={result.searchId} result={result} selectedId={plan?.selectedRoundTrip.id} busy={!!busy} onSelect={(trip) => void selectTrip(trip)} />}

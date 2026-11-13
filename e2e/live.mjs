@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { apiRequest, buildApp, launchBrowser, planInput, root, startApp, stopBuilds, stopApps } from './harness.mjs';
+import { apiRequest, buildApp, futureDate, launchBrowser, planInput, root, startApp, stopBuilds, stopApps } from './harness.mjs';
 
 const date = process.env.E2E_LIVE_DATE;
 if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(`${date}T00:00:00Z`)) || new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10) !== date)
@@ -92,8 +92,11 @@ try {
   const context = await browser.newContext({ viewport: { width: 360, height: 900 }, locale: 'pl-PL' });
   const page = await context.newPage();
   await page.goto(app.url);
-  await page.locator('#origin').fill(criteria.origin);
-  await page.locator('#destination').fill(criteria.destination);
+  await page.getByRole('button', { name: 'Uzupełnij przykładową trasę' }).click();
+  assert.equal(await page.locator('#origin').inputValue(), criteria.origin);
+  assert.equal(await page.locator('#destination').inputValue(), criteria.destination);
+  assert.equal(await page.locator('#departureDate').inputValue(), futureDate(1));
+  assert.equal(await page.locator('#returnDate').inputValue(), futureDate(1));
   await page.locator('#departureDate').fill(date);
   await page.locator('#returnDate').fill(date);
   await page.getByRole('button', { name: /Znajdź połączenia/ }).click();
