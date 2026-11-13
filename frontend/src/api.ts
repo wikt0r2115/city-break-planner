@@ -1,7 +1,8 @@
 import type { Criteria, PlaceCatalog, Plan, PlanInput, SearchResult } from './types';
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1').replace(/\/+$/, '');
-export const REQUEST_TIMEOUT_MS = 10000;
+const REQUEST_TIMEOUT_MS = 10000;
+export const SEARCH_TIMEOUT_MS = 25000;
 export class ApiError extends Error {
   constructor(message: string, public readonly status = 0, public readonly errors: { field: string; message: string }[] = []) { super(message); }
 }
@@ -14,13 +15,13 @@ function isPlaceCatalog(body: unknown): body is PlaceCatalog {
     && body.places.every((place) => record(place) && typeof place.value === 'string' && typeof place.label === 'string');
 }
 
-async function request(path: string, method: string, body?: unknown, token?: string, signal?: AbortSignal): Promise<unknown> {
+async function request(path: string, method: string, body?: unknown, token?: string, signal?: AbortSignal, timeoutMs = REQUEST_TIMEOUT_MS): Promise<unknown> {
   const controller = new AbortController();
   const abort = () => controller.abort();
   signal?.addEventListener('abort', abort, { once: true });
   if (signal?.aborted) controller.abort();
   let timedOut = false;
-  const timer = window.setTimeout(() => { timedOut = true; controller.abort(); }, REQUEST_TIMEOUT_MS);
+  const timer = window.setTimeout(() => { timedOut = true; controller.abort(); }, timeoutMs);
   try {
     const response = await fetch(`${apiBaseUrl}${path}`, {
       method, signal: controller.signal, cache: 'no-store',
@@ -52,7 +53,11 @@ export async function getPlaceCatalog(signal?: AbortSignal): Promise<PlaceCatalo
   if (!isPlaceCatalog(body)) throw new ApiError('Aplikacja zwróciła nieprawidłowe podpowiedzi miejsc.');
   return body;
 }
-export async function searchTrips(criteria: Criteria, signal?: AbortSignal): Promise<SearchResult> { const body = await request('/searches', 'POST', criteria, undefined, signal); if (!isSearch(body)) throw new ApiError('Aplikacja zwróciła nieprawidłową odpowiedź wyszukiwania.'); return body; }
+export async function searchTrips(criteria: Criteria, signal?: AbortSignal): Promise<SearchResult> {
+  const body = await request('/searches', 'POST', criteria, undefined, signal, SEARCH_TIMEOUT_MS);
+  if (!isSearch(body)) throw new ApiError('Aplikacja zwróciła nieprawidłową odpowiedź wyszukiwania.');
+  return body;
+}
 export async function previewPlan(input: PlanInput, signal?: AbortSignal): Promise<Plan> { return expectPlan(await request('/plans/preview', 'POST', input, undefined, signal)); }
 export async function createPlan(input: PlanInput): Promise<{ plan: Plan; ownerToken: string }> { const body = await request('/plans', 'POST', input); if (!record(body) || !isPlan(body.plan) || typeof body.ownerToken !== 'string' || !body.ownerToken) throw new ApiError('Aplikacja zwróciła nieprawidłowe potwierdzenie zapisu.'); return { plan: body.plan, ownerToken: body.ownerToken }; }
 export async function updatePlan(id: string, input: PlanInput, token: string): Promise<Plan> { return expectPlan(await request(`/plans/${encodeURIComponent(id)}`, 'PUT', input, token)); }

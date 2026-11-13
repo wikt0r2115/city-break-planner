@@ -1,5 +1,5 @@
 import { useState, useSyncExternalStore } from 'react';
-import { ExternalLink, Prices } from './components';
+import { SegmentLinks, SegmentPrices, SegmentSchedule, TripMetrics } from './components';
 import { moment, money } from './format';
 import type { Journey, SearchResult, RoundTrip } from './types';
 
@@ -21,12 +21,11 @@ function TripLeg({ journey, title }: { journey: Journey; title: string }) {
     <ol className="segments">
       {journey.segments.map((segment) => <li key={segment.id}>
         <strong>{segment.operator}</strong>
+        {segment.scheduleBasis && <p>{segment.origin.name} → {segment.destination.name}</p>}
         <p className="journey-times">{moment(segment.departureAt)} <span aria-hidden="true">→</span> {moment(segment.arrivalAt)}</p>
-        <Prices prices={segment.prices} compact />
-        <div className="inline-links">
-          <ExternalLink href={segment.bookingUrl}>Strona przewoźnika</ExternalLink>
-          <ExternalLink href={segment.mapUrl}>Otwórz mapę</ExternalLink>
-        </div>
+        <SegmentPrices segment={segment} compact />
+        <SegmentSchedule segment={segment} />
+        <SegmentLinks segment={segment} showDiscovery />
       </li>)}
     </ol>
   </section>;
@@ -40,6 +39,7 @@ function TripCard({ trip, rank, selected, busy, onSelect }: {
   onSelect: (trip: RoundTrip) => void;
 }) {
   const { complete, total, currency } = trip.costSummary;
+  const hasTimetable = [...trip.outbound.segments, ...trip.returnJourney.segments].some((segment) => segment.scheduleBasis);
   return <article className={selected ? 'trip-card chosen' : 'trip-card'}>
     <button
       type="button"
@@ -55,27 +55,48 @@ function TripCard({ trip, rank, selected, busy, onSelect }: {
       </div>
       {selected && <span className="selected-badge">Wybrany</span>}
     </div>
+    {hasTimetable && <TripMetrics trip={trip} />}
     <TripLeg journey={trip.outbound} title="Wyjazd" />
     <TripLeg journey={trip.returnJourney} title="Powrót" />
   </article>;
 }
 
-function ResultStatus({ result }: { result: SearchResult }) {
-  const { status, roundTripOptions, sources } = result;
+export function emptySearchMessage({ status, sources }: SearchResult) {
+  const reasons = new Set(sources.map((source) => source.reasonCode));
   if (status === 'NO_CONNECTION') {
-    return <div className="message empty"><h3>Brak potwierdzonych połączeń</h3><p>Spróbuj zmienić termin.</p></div>;
+    return { style: 'empty', title: 'Brak potwierdzonych połączeń', hint: 'Spróbuj zmienić termin.' };
+  }
+  if (reasons.has('AMBIGUOUS_PLACE')) {
+    return { style: 'empty', title: 'Doprecyzuj miejsce', hint: 'Wpisz pełną nazwę stacji lub wybierz podpowiedź.' };
+  }
+  if (reasons.has('OUTSIDE_COVERAGE')) {
+    return { style: 'empty', title: 'Brak rozkładu dla wybranych dat', hint: 'Wybierz termin objęty opublikowanym rozkładem.' };
+  }
+  if (reasons.has('AI_UNAVAILABLE')) {
+    return { style: 'error', title: 'Wyszukiwanie AI jest chwilowo niedostępne', hint: 'Spróbuj ponownie.' };
   }
   if (status === 'PROVIDER_ERROR') {
-    return <div className="message error"><h3>Nie udało się sprawdzić połączeń</h3><p>Spróbuj ponownie.</p></div>;
+    return { style: 'error', title: 'Nie udało się sprawdzić połączeń', hint: 'Spróbuj ponownie.' };
   }
-  if (roundTripOptions.length) return null;
-  if (sources.some((source) => source.reasonCode === 'UNSUPPORTED_ROUTE')) {
-    return <div className="message empty"><h3>Trasa poza zakresem planera</h3><p>Wybierz Dworzec Główny i Targ Rybny w Gdańsku.</p></div>;
+  if (reasons.has('UNSUPPORTED_ROUTE')) {
+    return { style: 'empty', title: 'Trasa poza zakresem planera', hint: 'Wybierz inną parę miejsc z podpowiedzi.' };
   }
-  if (sources.some((source) => source.reasonCode === 'OUTSIDE_COVERAGE')) {
-    return <div className="message empty"><h3>Brak rozkładu dla wybranych dat</h3><p>Spróbuj wybrać bliższy termin.</p></div>;
+  if (reasons.has('AI_NOT_CONFIGURED')) {
+    return { style: 'empty', title: 'Wyszukiwanie AI jest wyłączone', hint: 'Wybierz trasę z dostępnym rozkładem.' };
   }
-  return <p className="message warning">Nie udało się potwierdzić połączeń dla tych kryteriów.</p>;
+  if (reasons.has('AI_NO_MATCH')) {
+    return { style: 'empty', title: 'Brak połączeń potwierdzonych w rozkładzie', hint: 'Spróbuj wybrać inne miejsce lub datę.' };
+  }
+  return { style: 'warning', title: 'Nie udało się potwierdzić połączeń dla tych kryteriów.', hint: null };
+}
+
+function ResultStatus({ result }: { result: SearchResult }) {
+  if (result.roundTripOptions.length) return null;
+  const { style, title, hint } = emptySearchMessage(result);
+  return <div className={`message ${style}`}>
+    <h3>{title}</h3>
+    {hint && <p>{hint}</p>}
+  </div>;
 }
 
 export function TripResults({ result, selectedId, busy, onSelect }: {

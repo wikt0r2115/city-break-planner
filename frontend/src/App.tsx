@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { ApiError, clearOwnerToken, createPlan, deletePlan, getPlaceCatalog, getPlan, getSharedPlan, previewPlan, readOwnerToken, saveOwnerToken, searchTrips, updatePlan } from './api';
 import { Cost, ExternalLink, Prices, ReadOnlyPlan, TestBanner } from './components';
-import { TripResults } from './TripResults';
+import { emptySearchMessage, TripResults } from './TripResults';
 import { dateInWarsaw, duration, fromWarsawInput, itemsFromPlan, moment, nextDate, safeUrl, warsawInput } from './format';
 import type { Attraction, Criteria, ItemInput, PlaceCatalog, Plan, Priority, RoundTrip, SearchResult } from './types';
 import { PlaceField } from './PlaceField';
@@ -112,18 +112,15 @@ function Planner({ ownerId, onSaved }: { ownerId: string | null; onSaved: (id: s
       if (!mounted.current) return;
       if (!response.roundTripOptions.length) {
         if (plan) {
-          const reason = response.status === 'NO_CONNECTION'
-            ? 'Źródła potwierdziły brak kursów dla nowych kryteriów.'
-            : response.status === 'PROVIDER_ERROR'
-              ? 'Nie udało się sprawdzić połączeń dla nowych kryteriów.'
-              : 'Nie otrzymano wariantów dla nowych kryteriów; nie potwierdza to braku kursów.';
+          const { title, hint } = emptySearchMessage(response);
+          const reason = [title.replace(/\.?$/, '.'), hint].filter(Boolean).join(' ');
           setError(`${reason} Poprzedni plan, wybrane punkty i uprawnienia zostały zachowane. Nie zmieniono jego terminu.`);
           return;
         }
         setResult(response); setCriteria(response.criteria);
         setPlan(null); setSaved(null); setDirty(false); return;
       }
-      const sameRoute = plan && plan.criteria.origin === input.origin && plan.criteria.destination === input.destination;
+      const sameRoute = plan && plan.criteria.origin === response.criteria.origin && plan.criteria.destination === response.criteria.destination;
       const first = response.roundTripOptions[0];
       const items = sameRoute ? itemsFromPlan(plan) : recommendationInputs(first, response.attractions);
       const preview = await previewPlan({ criteria: response.criteria, selectedRoundTrip: first, items });

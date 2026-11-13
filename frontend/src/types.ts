@@ -6,7 +6,23 @@ export type Price = { status: 'KNOWN' | 'UNKNOWN' | 'PROVIDER_ERROR'; amount: st
 export type Place = { name: string; latitude: number | null; longitude: number | null };
 export type PlaceSuggestion = { value: string; label: string };
 export type PlaceCatalog = { places: PlaceSuggestion[]; testData: boolean };
-export type Segment = { id: string; mode: string; operator: string; origin: Place; destination: Place; departureAt: string; arrivalAt: string; prices: Price[]; bookingUrl: string | null; mapUrl: string | null };
+export type Segment = {
+  id: string;
+  mode: string;
+  operator: string;
+  origin: Place;
+  destination: Place;
+  departureAt: string;
+  arrivalAt: string;
+  prices: Price[];
+  bookingUrl: string | null;
+  mapUrl: string | null;
+  scheduleBasis?: 'PLANNED' | 'REALTIME' | null;
+  scheduleSourceUrl?: string | null;
+  schedulePublishedAt?: string | null;
+  scheduleCheckedAt?: string | null;
+  discoverySourceUrl?: string | null;
+};
 export type Journey = { departureAt: string; arrivalAt: string; segments: Segment[] };
 export type CostSummary = { total: string | null; currency: string; fareType: FareType; complete: boolean; missingComponents: string[] };
 export type RoundTrip = { id: string; outbound: Journey; returnJourney: Journey; travelMinutes: number; transfers: number; timeAtDestinationMinutes: number; costSummary: CostSummary; recommendedAttractionIds: string[] };

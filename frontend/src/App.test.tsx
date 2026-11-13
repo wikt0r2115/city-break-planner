@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
-import { REQUEST_TIMEOUT_MS } from './api';
+import { SEARCH_TIMEOUT_MS } from './api';
 import type { PlanInput } from './types';
 import { criteria, earlyTrip, planFor, result, savedPlan } from './test/fixtures';
 
@@ -219,7 +219,9 @@ describe('wyszukiwanie i planowanie z API', () => {
     vi.stubGlobal('fetch', vi.fn((_url, options: RequestInit) => new Promise((_resolve, reject) => { options.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError'))); })));
     render(<App />); fillSearch(); fireEvent.click(screen.getByRole('button', { name: /Znajdź połączenia/ }));
     expect(screen.getByRole('status')).toHaveTextContent('Szukamy połączeń');
-    await act(async () => { await vi.advanceTimersByTimeAsync(REQUEST_TIMEOUT_MS); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(SEARCH_TIMEOUT_MS - 1); });
+    expect(screen.getByRole('button', { name: /Znajdź połączenia/ })).toBeDisabled();
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
     expect(screen.getByRole('alert')).toHaveTextContent('Odpowiedź trwała zbyt długo');
     expect(screen.getByRole('button', { name: /Znajdź połączenia/ })).toBeEnabled();
   });
