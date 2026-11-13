@@ -7,16 +7,18 @@ export function ExternalLink({ href, children }: { href?: string | null; childre
 }
 export function TestBanner() { return <div className="test-banner" role="note"><strong>Dane testowe — to nie są rzeczywiste oferty.</strong> Przykładowe ceny i połączenia służą do sprawdzenia działania planera.</div>; }
 export function Cost({ summary }: { summary: CostSummary }) { return <div className="cost"><strong>{summary.complete && summary.total !== null ? money(summary.total, summary.currency) : 'Łączny koszt niepotwierdzony'}</strong><span>{summary.fareType === 'REDUCED' ? 'Taryfa ulgowa' : 'Taryfa normalna'} · przejazdy i wybrane wstępy</span>{!summary.complete && <span className="warning-text">Brakuje potwierdzenia {summary.missingComponents?.length || 'części'} składników ceny.</span>}</div>; }
-export function Prices({ prices }: { prices: Price[] }) {
+export function Prices({ prices, compact = false }: { prices: Price[]; compact?: boolean }) {
   return <div className="prices">{prices.length ? prices.map((price, index) => <div className="price-line" key={`${price.fareType}-${index}`}>
-    <span>{price.fareType === 'REDUCED' ? 'Ulgowy' : 'Normalny'}: <strong>{price.status === 'KNOWN' && price.amount !== null ? money(price.amount, price.currency) : price.status === 'PROVIDER_ERROR' ? 'Błąd źródła ceny' : 'Cena niepotwierdzona'}</strong></span>
-    {price.basis === 'PUBLISHED_TARIFF' && <small className="warning-text">Taryfa publikowana — nie jest wyceną konkretnej rezerwacji.</small>}
-    {price.basis === 'LIVE_OFFER' && <small>Oferta wyceniona dla wskazanego terminu.</small>}
-    {price.basis === 'TEST_DATA' && <small>Przykładowa cena testowa.</small>}
-    {price.eligibility && <small>Warunki ulgi: {price.eligibility}</small>}
-    {price.reason && <small>{price.reason}</small>}
-    {price.checkedAt && <small>Sprawdzono: {moment(price.checkedAt)}</small>}
-    <small><ExternalLink href={price.sourceUrl}>Źródło ceny</ExternalLink></small>
+    <span>{price.fareType === 'REDUCED' ? 'Ulgowa' : 'Normalna'}: <strong>{price.status === 'KNOWN' && price.amount !== null ? money(price.amount, price.currency) : price.status === 'PROVIDER_ERROR' ? 'Błąd źródła ceny' : 'Cena niepotwierdzona'}</strong></span>
+    {!compact && <>
+      {price.basis === 'PUBLISHED_TARIFF' && <small className="warning-text">Taryfa publikowana — nie jest wyceną konkretnej rezerwacji.</small>}
+      {price.basis === 'LIVE_OFFER' && <small>Oferta wyceniona dla wskazanego terminu.</small>}
+      {price.basis === 'TEST_DATA' && <small>Przykładowa cena testowa.</small>}
+      {price.eligibility && <small>Warunki ulgi: {price.eligibility}</small>}
+      {price.reason && <small>{price.reason}</small>}
+      {price.checkedAt && <small>Sprawdzono: {moment(price.checkedAt)}</small>}
+      <small><ExternalLink href={price.sourceUrl}>Źródło ceny</ExternalLink></small>
+    </>}
   </div>) : <span className="warning-text">Cena niepotwierdzona</span>}</div>;
 }
 const modes: Record<string, string> = { TRAIN: 'Pociąg', PLANE: 'Samolot', COACH: 'Autokar', FERRY: 'Prom', LOCAL_TRANSIT: 'Komunikacja miejska', WALK: 'Pieszo' };

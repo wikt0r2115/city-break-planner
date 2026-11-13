@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { ApiError, clearOwnerToken, createPlan, deletePlan, getPlan, getSharedPlan, previewPlan, readOwnerToken, saveOwnerToken, searchTrips, updatePlan } from './api';
-import { Cost, ExternalLink, Prices, ReadOnlyPlan, TestBanner, TripDetails } from './components';
+import { Cost, ExternalLink, Prices, ReadOnlyPlan, TestBanner } from './components';
+import { TripResults } from './TripResults';
 import { dateInWarsaw, duration, fromWarsawInput, itemsFromPlan, moment, nextDate, safeUrl, warsawInput } from './format';
 import type { Attraction, Criteria, ItemInput, Plan, Priority, RoundTrip, SearchResult } from './types';
 
@@ -105,8 +106,7 @@ function Planner({ ownerId, onSaved }: { ownerId: string | null; onSaved: (id: s
             : response.status === 'PROVIDER_ERROR'
               ? 'Nie udało się sprawdzić połączeń dla nowych kryteriów.'
               : 'Nie otrzymano wariantów dla nowych kryteriów; nie potwierdza to braku kursów.';
-          const details = response.sources.map((source) => source.message).filter(Boolean).join(' ');
-          setError(`${reason} Poprzedni plan, wybrane punkty i uprawnienia zostały zachowane. Nie zmieniono jego terminu.${details ? ` ${details}` : ''}`);
+          setError(`${reason} Poprzedni plan, wybrane punkty i uprawnienia zostały zachowane. Nie zmieniono jego terminu.`);
           return;
         }
         setResult(response); setCriteria(response.criteria);
@@ -192,14 +192,7 @@ function Planner({ ownerId, onSaved }: { ownerId: string | null; onSaved: (id: s
       </div><fieldset className="priority-picker"><legend>Co jest dla Ciebie najważniejsze?</legend><div className="priority-options">{priorities.map((priority) => <label key={priority.value} className={`priority-option ${criteria.priority === priority.value ? 'selected' : ''}`}><input type="radio" name="priority" value={priority.value} checked={criteria.priority === priority.value} onChange={() => setField('priority', priority.value)} /><span><strong>{priority.title}</strong><small>{priority.detail}</small></span></label>)}</div></fieldset><div className="search-actions"><label className="fare-select">Porównuj taryfę<select value={criteria.fareType} onChange={(event) => setField('fareType', event.target.value)}><option value="STANDARD">Normalną</option><option value="REDUCED">Ulgową, jeśli potwierdzona</option></select></label><button className="primary-button" type="submit">Znajdź połączenia <span aria-hidden="true">↗</span></button></div></fieldset></form>
     </section>
     {busy && <p className="loading-message" role="status">{busy}</p>}{error && <div className="message error" role="alert">{error}</div>}{notice && <div className="message success" role="status">{notice}</div>}{testData && <TestBanner />}
-    {result && <section className="results" aria-labelledby="results-title"><div className="section-heading"><div><p className="eyebrow">02 / PODRÓŻ</p><h2 id="results-title">{result.criteria.origin} → {result.criteria.destination}</h2></div><span className="small-note">{result.roundTripOptions.length} wariantów w obie strony</span></div>
-      {result.status === 'NO_CONNECTION' && <div className="message empty"><h3>Brak potwierdzonych połączeń</h3><p>Źródła potwierdziły brak kursów dla tej trasy i dat. Spróbuj zmienić termin.</p></div>}
-      {result.status === 'PROVIDER_ERROR' && <div className="message error"><h3>Nie udało się sprawdzić połączeń</h3><p>Źródło danych jest niedostępne albo wymaga konfiguracji. To nie jest potwierdzenie braku kursów.</p></div>}
-      {result.status === 'PARTIAL' && <div className="message warning">Wynik jest częściowy. Niektóre źródła lub ceny są niedostępne; szczegóły znajdziesz przy połączeniach.</div>}
-      {!result.roundTripOptions.length && result.status === 'OK' && <div className="message warning">Źródło nie zwróciło wariantów. Nie potwierdza to braku połączeń.</div>}
-      {result.sources.some((source) => source.message) && <ul className="source-notes">{result.sources.filter((source) => source.message).map((source, index) => <li key={`${source.sourceId}-${index}`}>{source.message} <ExternalLink href={source.url}>Źródło</ExternalLink>{source.checkedAt && <small> · sprawdzono {moment(source.checkedAt)}</small>}</li>)}</ul>}
-      <div className="option-grid">{result.roundTripOptions.map((trip, index) => <article className={`trip-card ${plan?.selectedRoundTrip.id === trip.id ? 'chosen' : ''}`} key={trip.id}><div className="trip-card-top"><span className="eyebrow">WARIANT {String(index + 1).padStart(2, '0')}</span>{plan?.selectedRoundTrip.id === trip.id && <span className="selected-badge">Wybrany</span>}</div><h3>Powrót: {moment(trip.returnJourney.departureAt)}</h3><Cost summary={trip.costSummary} /><TripDetails trip={trip} /><button className="secondary-button" type="button" disabled={!!busy || plan?.selectedRoundTrip.id === trip.id} onClick={() => void selectTrip(trip)}>{plan?.selectedRoundTrip.id === trip.id ? 'Połączenie wybrane' : 'Wybierz połączenie'}</button></article>)}</div>
-    </section>}
+    {result && <TripResults key={result.searchId} result={result} selectedId={plan?.selectedRoundTrip.id} busy={!!busy} onSelect={(trip) => void selectTrip(trip)} />}
     {plan && <section className="editor" aria-labelledby="editor-title">
       <div className="section-heading">
         <div>

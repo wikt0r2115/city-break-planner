@@ -187,11 +187,13 @@ try {
   await frame('2 / Wyniki i alternatywne powroty', 2000);
 
   const names = await page.locator('.schedule > li h4').allTextContents();
-  const early = page.locator('.trip-card').filter({ has: page.getByRole('heading', { name: /Powrót:.*14:00/ }) });
-  await early.getByRole('button', { name: 'Wybierz połączenie', exact: true }).click();
+  const early = page.getByRole('button', { name: /^Wariant .*powrót.*14:00/i });
+  const next = page.getByRole('button', { name: 'Następna' });
+  while (!await early.count() && await next.isEnabled()) await next.click();
+  await early.click({ position: { x: 12, y: 12 } });
   await page.locator('.conflicts').first().waitFor();
   assert.deepEqual(await page.locator('.schedule > li h4').allTextContents(), names);
-  await early.evaluate((element) => element.scrollIntoView({ block: 'start' }));
+  await early.evaluate((element) => element.closest('.trip-card').scrollIntoView({ block: 'start' }));
   await page.evaluate(() => window.scrollBy(0, -75));
   await frame('3 / Wybrano wcześniejszy powrót: 14:00', 1800);
   await page.locator('.conflicts').first().evaluate((element) => element.scrollIntoView({ block: 'center' }));

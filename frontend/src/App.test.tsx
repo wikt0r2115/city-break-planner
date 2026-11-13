@@ -50,7 +50,8 @@ describe('wyszukiwanie i planowanie z API', () => {
     expect(fetch.mock.calls[0][0]).toBe('http://localhost:8080/api/v1/searches');
     expect(JSON.parse(String(fetch.mock.calls[0][1]?.body)).priority).toBe('SHORTEST_TRAVEL_TIME');
     expect(screen.getByText('Dane testowe — to nie są rzeczywiste oferty.')).toBeInTheDocument();
-    expect(screen.getAllByText('Testowa ulga dla studentów.', { exact: false }).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Ulgowa:', { exact: false }).length).toBeGreaterThan(0);
+    expect(screen.queryByText('Testowa ulga dla studentów.', { exact: false })).not.toBeInTheDocument();
     expect(screen.getAllByText('Łączny koszt niepotwierdzony').length).toBeGreaterThan(0);
     expect(screen.getAllByRole('link', { name: /Strona przewoźnika/ })[0]).toHaveAttribute('rel', 'noopener noreferrer');
     expect(screen.queryByText(/najtańsz/i)).not.toBeInTheDocument();
@@ -69,7 +70,7 @@ describe('wyszukiwanie i planowanie z API', () => {
   it('zachowuje punkty po wcześniejszym powrocie, pokazuje powód konfliktu i obsługuje dodanie, kolejność, usunięcie i zapis', async () => {
     const { fetch, previews } = mockApi(); render(<App />); await startPlan();
     const original = previews[0].items[0];
-    fireEvent.click(screen.getByRole('button', { name: 'Wybierz połączenie' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Wariant 2, powrót/ }));
     await screen.findByText('Nie zdążysz na wcześniejszy powrót po tej wizycie.');
     expect(previews.at(-1)?.selectedRoundTrip.id).toBe(earlyTrip.id);
     expect(previews.at(-1)?.items[0].id).toBe(original.id);
@@ -164,7 +165,7 @@ describe('wyszukiwanie i planowanie z API', () => {
     expect(screen.getByRole('button', { name: 'Usuń zapisany plan' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Warszawa → Gdańsk' })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Wybierz połączenie' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Wariant 2, powrót/ }));
     await screen.findByText('Nie zdążysz na wcześniejszy powrót po tej wizycie.');
     await waitFor(() => expect(screen.getByRole('button', { name: /Zapisz zmiany/ })).toBeEnabled());
     fireEvent.click(screen.getByRole('button', { name: /Zapisz zmiany/ }));

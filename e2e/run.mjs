@@ -46,11 +46,22 @@ try {
     await page.keyboard.press('Enter');
     await page.getByRole('heading', { name: 'Twój plan zwiedzania' }).waitFor();
     await idle();
-    assert.equal(await page.locator('.trip-card').count(), 6);
+    assert.equal(await page.locator('.trip-card').count(), 3);
     assert.equal(await page.locator('.schedule > li').count(), 3);
     await page.locator('.test-banner').waitFor();
+    assert.ok(await page.getByText(/Ulgowa:/).count());
+    assert.equal(await page.locator('.source-notes').count(), 0);
+    assert.equal(await page.locator('.trip-card').getByText(/Sprawdzono:|Warunki ulgi:|Źródło ceny/).count(), 0);
+    const next = page.getByRole('button', { name: 'Następna' });
+    const previous = page.getByRole('button', { name: 'Poprzednia' });
+    assert.ok(await previous.isDisabled());
+    await next.focus();
+    await page.keyboard.press('Enter');
+    assert.equal(await page.getByText('Strona 2 z 2', { exact: true }).count(), 1);
+    assert.ok(await next.isDisabled());
     assert.ok(await page.getByText('Łączny koszt niepotwierdzony', { exact: true }).count());
-    assert.ok(await page.getByText(/Ulgowy:/).count());
+    await previous.click();
+    assert.equal(await page.getByRole('button', { name: /^Wariant 1,/ }).getAttribute('aria-pressed'), 'true');
     const links = await page.locator('.inline-links a').evaluateAll((elements) => elements.map((element) => ({ href: element.href, rel: element.rel, policy: element.referrerPolicy })));
     assert.ok(links.length);
     assert.ok(links.every((link) => /^https?:/.test(link.href) && link.rel.includes('noreferrer') && link.policy === 'no-referrer'));
@@ -68,8 +79,19 @@ try {
 
   await check('earlier return keeps selected points and explains conflicts', async () => {
     const original = await names();
-    const early = page.locator('.trip-card').filter({ has: page.getByRole('heading', { name: /Powrót:.*14:00/ }) });
-    await Promise.all([preview(), early.getByRole('button', { name: 'Wybierz połączenie', exact: true }).click()]);
+    const early = page.getByRole('button', { name: /^Wariant .*powrót.*14:00/i });
+    const next = page.getByRole('button', { name: 'Następna' });
+    while (!await early.count() && await next.isEnabled()) await next.click();
+    const earlyCard = page.locator('.trip-card').filter({ has: early });
+    for (const link of await earlyCard.getByRole('link').all()) {
+      await link.evaluate((element) => element.addEventListener('click', (event) => event.preventDefault(), { once: true }));
+      await link.click();
+      assert.equal(await early.getAttribute('aria-pressed'), 'false');
+      await link.evaluate((element) => element.addEventListener('click', (event) => event.preventDefault(), { once: true }));
+      await link.press('Enter');
+      assert.equal(await early.getAttribute('aria-pressed'), 'false');
+    }
+    await Promise.all([preview(), early.press('Enter')]);
     await idle();
     await page.locator('.conflicts').first().waitFor();
     assert.deepEqual(await names(), original);
@@ -100,8 +122,10 @@ try {
     assert.ok(!(await page.locator('body').innerText()).includes(ownerToken));
     shareUrl = await page.getByLabel('Link tylko do odczytu', { exact: true }).inputValue();
     assert.equal(new URL(shareUrl).origin, app.url);
-    const budget = page.locator('.trip-card').first();
-    await Promise.all([preview(), budget.getByRole('button', { name: 'Wybierz połączenie', exact: true }).click()]);
+    const previous = page.getByRole('button', { name: 'Poprzednia' });
+    while (await previous.isEnabled()) await previous.click();
+    const budget = page.getByRole('button', { name: /^Wariant 1,/ });
+    await Promise.all([preview(), budget.click({ position: { x: 12, y: 12 } })]);
     await idle();
     const update = page.waitForResponse((response) => response.url().endsWith(`/plans/${id}`) && response.request().method() === 'PUT');
     await page.getByRole('button', { name: /Zapisz zmiany/ }).click();
@@ -128,6 +152,8 @@ try {
 
   await check('independent public session, no edit UI and mobile layout', async () => {
     await page.setViewportSize({ width: 360, height: 900 });
+    await page.getByText('Strona 1 z 3', { exact: true }).waitFor();
+    assert.equal(await page.locator('.trip-card').count(), 2);
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
     const publicContext = await browser.newContext({ viewport: { width: 360, height: 900 } });
     try {

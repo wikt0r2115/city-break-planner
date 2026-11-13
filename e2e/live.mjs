@@ -99,7 +99,9 @@ try {
   await page.getByRole('button', { name: /Znajdź połączenia/ }).click();
   await page.locator('.trip-card').first().waitFor();
   assert.equal(await page.locator('.test-banner').count(), 0);
-  await page.getByText(/Taryfa publikowana/i).first().waitFor();
+  assert.equal(await page.locator('.trip-card').count(), Math.min(2, result.roundTripOptions.length));
+  await page.locator('.trip-card').getByText('Normalna:', { exact: false }).first().waitFor();
+  assert.equal(await page.locator('.trip-card').getByText(/Taryfa publikowana|Sprawdzono:|Źródło ceny/i).count(), 0);
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
   await context.close();
   const publicContext = await browser.newContext({ viewport: { width: 360, height: 900 }, locale: 'pl-PL' });
