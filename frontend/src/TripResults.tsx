@@ -68,9 +68,7 @@ function ResultStatus({ result }: { result: SearchResult }) {
   if (status === 'PROVIDER_ERROR') {
     return <div className="message error"><h3>Nie udało się sprawdzić połączeń</h3><p>Spróbuj ponownie.</p></div>;
   }
-  if (roundTripOptions.length) {
-    return status === 'PARTIAL' ? <p className="message warning">Część danych jest niedostępna.</p> : null;
-  }
+  if (roundTripOptions.length) return null;
   if (sources.some((source) => source.reasonCode === 'UNSUPPORTED_ROUTE')) {
     return <div className="message empty"><h3>Trasa poza zakresem planera</h3><p>Wybierz Dworzec Główny i Targ Rybny w Gdańsku.</p></div>;
   }

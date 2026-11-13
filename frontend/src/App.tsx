@@ -207,9 +207,7 @@ function Planner({ ownerId, onSaved }: { ownerId: string | null; onSaved: (id: s
 
   return <><section className="hero"><div><p className="eyebrow">NOWE MIEJSCA, TWÓJ RYTM</p><h1>Mały wyjazd.<br />Dużo <em>możliwości.</em></h1></div><p className="lead">Wybierz cel i to, na czym najbardziej Ci zależy. Połącz podróż i zwiedzanie w jeden własny plan.</p></section>
     <section className="panel search-panel" aria-labelledby="search-title"><div className="section-heading"><div><p className="eyebrow">01 / KIERUNEK</p><h2 id="search-title">Dokąd tym razem?</h2></div><span className="small-note">Plan na Twój rytm i budżet</span></div>
-      <p className="coverage-note">{exampleMode
-        ? 'Tryb demo. Połączenia, ceny i atrakcje są przykładowe.'
-        : 'Dane rzeczywiste w tym etapie: linia 100 w Gdańsku, Dworzec Główny ↔ Targ Rybny, w zakresie dat opublikowanym przez ZTM.'}</p>
+      {exampleMode && <p className="coverage-note">Tryb demo. Połączenia, ceny i atrakcje są przykładowe.</p>}
       <form onSubmit={handleSearch} noValidate><fieldset disabled={!!busy} className="unframed"><legend className="sr-only">Szczegóły wyjazdu</legend><div className="form-grid">
         <PlaceField id="origin" label="Miejsce startu" value={criteria.origin} otherValue={criteria.destination} error={fieldErrors.origin} onChange={(value) => setField('origin', value)} placeholder="np. Dworzec Główny" catalog={placeCatalog} catalogError={placeCatalogError} disabled={!!busy} />
         <PlaceField id="destination" label="Cel podróży" value={criteria.destination} otherValue={criteria.origin} error={fieldErrors.destination} onChange={(value) => setField('destination', value)} placeholder="np. Targ Rybny" catalog={placeCatalog} catalogError={placeCatalogError} disabled={!!busy} />
