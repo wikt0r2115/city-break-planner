@@ -199,4 +199,14 @@ export function futureDate(days) {
   return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2] + days)).toISOString().slice(0, 10);
 }
 
-export const planInput = (plan) => ({ criteria: plan.criteria, selectedRoundTrip: plan.selectedRoundTrip, items: plan.items.map((item) => ({ id: item.id, attractionId: item.attractionId, startsAt: item.startsAt, visitMinutes: Math.round((Date.parse(item.endsAt) - Date.parse(item.startsAt)) / 60000) })) });
+export const planInput = (plan) => ({
+  criteria: plan.criteria,
+  selectedRoundTrip: plan.selectedRoundTrip,
+  items: plan.items.map((item) => ({
+    id: item.id,
+    attractionId: item.attractionId,
+    startsAt: item.startsAt,
+    visitMinutes: Math.round((Date.parse(item.endsAt) - Date.parse(item.startsAt)) / 60000),
+    automaticTime: item.automaticTime,
+  })),
+});

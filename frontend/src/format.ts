@@ -1,6 +1,9 @@
 import type { Plan, ItemInput } from './types';
 export function dateInWarsaw(date = new Date()): string { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Warsaw', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date); }
-export function nextDate(days: number): string { return dateInWarsaw(new Date(Date.now() + days * 86400000)); }
+export function nextDate(days: number): string {
+  const [year, month, day] = dateInWarsaw().split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+}
 export function moment(value: string): string { const date = new Date(value); return Number.isNaN(date.getTime()) ? 'Nieznany czas' : new Intl.DateTimeFormat('pl-PL', { timeZone: 'Europe/Warsaw', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(date); }
 export function duration(minutes: number): string { const hours = Math.floor(minutes / 60); const remainder = minutes % 60; return `${hours ? `${hours} h` : ''}${hours && remainder ? ' ' : ''}${remainder || !hours ? `${remainder} min` : ''}`; }
 export function money(amount: string, currency: string): string { const number = Number(amount); if (!Number.isFinite(number)) return 'Cena niepotwierdzona'; try { return new Intl.NumberFormat('pl-PL', { style: 'currency', currency }).format(number); } catch { return `${amount} ${currency}`; } }
