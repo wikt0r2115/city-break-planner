@@ -96,6 +96,18 @@ class SkmTimetableTest {
         assertThat(attempts.get()).isEqualTo(1);
     }
 
+    @Test void coldStartBeforeFourAcceptsThePreviousOrCurrentPublication() throws IOException {
+        Clock early = Clock.fixed(Instant.parse("2026-11-14T01:30:00Z"), ZoneOffset.UTC);
+        var zip = archive();
+        var search = criteria("Gdańsk", "Gdynia", SATURDAY, SUNDAY);
+        for (OffsetDateTime date : new OffsetDateTime[] { PUBLISHED, PUBLISHED.plusDays(1) }) {
+            var timetable = new SkmTimetable(early, () -> new SkmFeedClient.Download(zip, date));
+            assertThat(timetable.search(search).options()).isNotEmpty();
+        }
+        var stale = new SkmTimetable(early, () -> new SkmFeedClient.Download(zip, PUBLISHED.minusDays(1)));
+        assertThat(stale.search(search).status()).isEqualTo(SearchStatus.PROVIDER_ERROR);
+    }
+
     private static SkmTimetable fixture() throws IOException {
         byte[] zip = archive();
         return new SkmTimetable(CLOCK, () -> new SkmFeedClient.Download(zip, PUBLISHED));

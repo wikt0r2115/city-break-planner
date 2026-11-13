@@ -122,13 +122,15 @@ public final class SkmTimetable {
         var now = clock.instant().atZone(SkmGtfs.WARSAW);
         boolean beforeUpdate = now.toLocalTime().isBefore(PUBLISH_BY);
         LocalDate publicationDay = beforeUpdate ? now.toLocalDate().minusDays(1) : now.toLocalDate();
-        if (snapshot != null && snapshot.publicationDay().equals(publicationDay)) return snapshot;
-        if (beforeUpdate || now.toInstant().isBefore(retryAfter)) throw new IOException("SKM feed not ready");
+        if (snapshot != null && !snapshot.publicationDay().isBefore(publicationDay)) return snapshot;
+        if (now.toInstant().isBefore(retryAfter)) throw new IOException("SKM feed not ready");
         retryAfter = now.toInstant().plus(RETRY_INTERVAL);
         SkmGtfs timetable = SkmGtfs.read(fetcher.fetch(), STOP_NAMES);
-        if (timetable.publishedAt().atZoneSameInstant(SkmGtfs.WARSAW).toLocalDate().isBefore(publicationDay))
-            throw new IOException("SKM archive has not been updated for this publication day");
-        snapshot = new Snapshot(publicationDay, clock.instant().atZone(SkmGtfs.WARSAW).toOffsetDateTime(), timetable);
+        var checkedAt = clock.instant().atZone(SkmGtfs.WARSAW).toOffsetDateTime();
+        LocalDate archiveDay = timetable.publishedAt().atZoneSameInstant(SkmGtfs.WARSAW).toLocalDate();
+        if (archiveDay.isBefore(publicationDay) || timetable.publishedAt().isAfter(checkedAt))
+            throw new IOException("SKM archive publication timestamp is outside the expected range");
+        snapshot = new Snapshot(archiveDay, checkedAt, timetable);
         return snapshot;
     }
 
