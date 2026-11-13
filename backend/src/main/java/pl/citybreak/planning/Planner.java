@@ -14,20 +14,6 @@ public class Planner {
     public Planner(TravelProvider provider) { this.provider = provider; }
 
     public List<RoundTrip> rank(Criteria criteria, List<RoundTrip> options, List<Attraction> attractions) {
-        List<RoundTrip> enriched = new ArrayList<>();
-        for (RoundTrip option : options) {
-            List<ItemInput> candidates = new ArrayList<>();
-            for (Attraction attraction : attractions) {
-                var attempted = new ArrayList<>(candidates);
-                attempted.add(new ItemInput("recommend-" + attraction.id(), attraction.id(), null, attraction.visitMinutes()));
-                List<PlanItem> schedule = schedule(option, attempted, attractions);
-                if (schedule.stream().allMatch(item -> item.conflicts().isEmpty())) candidates = attempted;
-            }
-            List<String> recommended = candidates.stream().map(ItemInput::attractionId).toList();
-            CostSummary total = cost(criteria, option, recommended, attractions);
-            enriched.add(new RoundTrip(option.id(), option.outbound(), option.returnJourney(), option.travelMinutes(),
-                    option.transfers(), option.timeAtDestinationMinutes(), total, recommended));
-        }
         Comparator<RoundTrip> tie = Comparator.comparingLong(RoundTrip::travelMinutes)
                 .thenComparingInt(RoundTrip::transfers).thenComparing(RoundTrip::id);
         Comparator<RoundTrip> main = switch (criteria.priority()) {
@@ -38,8 +24,20 @@ public class Planner {
             case FEWEST_TRANSFERS -> Comparator.comparingInt(RoundTrip::transfers);
             case MOST_TIME_AT_DESTINATION -> Comparator.comparingLong(RoundTrip::timeAtDestinationMinutes).reversed();
         };
-        enriched.sort(main.thenComparing(tie));
-        return List.copyOf(enriched);
+        return options.stream().map(option -> withRecommendations(criteria, option, attractions))
+                .sorted(main.thenComparing(tie)).toList();
+    }
+
+    public RoundTrip withRecommendations(Criteria criteria, RoundTrip option, List<Attraction> attractions) {
+        List<ItemInput> candidates = new ArrayList<>();
+        for (Attraction attraction : attractions) {
+            candidates.add(new ItemInput("recommend-" + attraction.id(), attraction.id(), null, attraction.visitMinutes()));
+            if (schedule(option, candidates, attractions).stream().anyMatch(item -> !item.conflicts().isEmpty()))
+                candidates.remove(candidates.size() - 1);
+        }
+        List<String> recommended = candidates.stream().map(ItemInput::attractionId).toList();
+        return new RoundTrip(option.id(), option.outbound(), option.returnJourney(), option.travelMinutes(),
+                option.transfers(), option.timeAtDestinationMinutes(), cost(criteria, option, recommended, attractions), recommended);
     }
 
     public List<PlanItem> schedule(RoundTrip trip, List<ItemInput> inputs, List<Attraction> attractions) {
@@ -63,7 +61,7 @@ public class Planner {
             OpeningHours opening = attraction.openingHours();
             if (opening == null || opening.status() == OpeningStatus.UNKNOWN)
                 add(conflicts, ConflictCode.MISSING_DATA, "Nie potwierdzono godzin otwarcia atrakcji.", input.id());
-            else if (opening.intervals().stream().noneMatch(interval -> !start.isBefore(interval.opensAt()) && !end.isAfter(interval.closesAt())))
+            else if (opening.intervals().stream().noneMatch(interval -> containsVisit(interval, start, end)))
                 add(conflicts, ConflictCode.OPENING_HOURS, "Wizyta nie mieści się w potwierdzonych godzinach otwarcia.", input.id());
             Integer toReturn = provider.transferMinutes(attraction.location(), returnPlace);
             if (toReturn == null) add(conflicts, ConflictCode.MISSING_DATA, "Brak potwierdzonego czasu dojazdu na powrót.", input.id());
@@ -83,7 +81,7 @@ public class Planner {
         List<String> missing = new ArrayList<>();
         for (Journey journey : List.of(trip.outbound(), trip.returnJourney())) {
             for (Segment segment : journey.segments()) {
-                BigDecimal amount = price(segment.prices(), criteria);
+                BigDecimal amount = comparablePrice(segment.prices(), criteria);
                 if (amount == null) missing.add("segment:" + segment.id()); else total = total.add(amount);
             }
         }
@@ -91,20 +89,22 @@ public class Planner {
         attractions.forEach(attraction -> catalog.put(attraction.id(), attraction));
         for (String id : attractionIds) {
             Attraction attraction = catalog.get(id);
-            BigDecimal amount = attraction == null ? null : price(attraction.entryPrices(), criteria);
+            BigDecimal amount = attraction == null ? null : comparablePrice(attraction.entryPrices(), criteria);
             if (amount == null) missing.add("attraction:" + id); else total = total.add(amount);
         }
         return new CostSummary(missing.isEmpty() ? total.setScale(2).toPlainString() : null,
                 criteria.currency(), criteria.fareType(), missing.isEmpty(), List.copyOf(missing));
     }
 
-    private BigDecimal price(List<Price> prices, Criteria criteria) {
+    /** Returns null when the catalog has no comparable amount for the selected tariff and currency. */
+    public BigDecimal comparablePrice(List<Price> prices, Criteria criteria) {
         if (prices == null) return null;
         for (Price price : prices) {
             if (price.status() != PriceStatus.KNOWN || price.fareType() != criteria.fareType()
-                    || !criteria.currency().equals(price.currency()) || price.amount() == null
-                    || price.sourceId() == null || price.sourceUrl() == null || price.checkedAt() == null
-                    || (price.fareType() == FareType.REDUCED && (price.eligibility() == null || price.eligibility().isBlank()))) continue;
+                    || !criteria.currency().equals(price.currency()) || price.amount() == null || price.sourceId() == null) continue;
+            boolean demo = price.testData() && price.basis() == PriceBasis.TEST_DATA;
+            if (!demo && (price.sourceUrl() == null || price.checkedAt() == null
+                    || (price.fareType() == FareType.REDUCED && (price.eligibility() == null || price.eligibility().isBlank())))) continue;
             try {
                 BigDecimal amount = new BigDecimal(price.amount());
                 if (amount.signum() >= 0 && amount.scale() <= 2) return amount;
@@ -112,13 +112,19 @@ public class Planner {
         }
         return null;
     }
-    private OffsetDateTime earliestStart(OffsetDateTime earliest, int minutes, OpeningHours opening) {
+    private static OffsetDateTime earliestStart(OffsetDateTime earliest, int minutes, OpeningHours opening) {
         if (opening == null || opening.status() == OpeningStatus.UNKNOWN) return earliest;
-        return opening.intervals().stream().sorted(Comparator.comparing(OpeningInterval::opensAt))
-                .map(interval -> earliest.isAfter(interval.opensAt()) ? earliest : interval.opensAt())
-                .filter(start -> opening.intervals().stream().anyMatch(interval -> !start.isBefore(interval.opensAt())
-                        && !start.plusMinutes(minutes).isAfter(interval.closesAt())))
-                .findFirst().orElse(earliest);
+        OffsetDateTime best = null;
+        for (OpeningInterval interval : opening.intervals()) {
+            OffsetDateTime start = earliest.isAfter(interval.opensAt()) ? earliest : interval.opensAt();
+            if (containsVisit(interval, start, start.plusMinutes(minutes)) && (best == null || start.isBefore(best)))
+                best = start;
+        }
+        return best == null ? earliest : best;
+    }
+
+    private static boolean containsVisit(OpeningInterval interval, OffsetDateTime start, OffsetDateTime end) {
+        return !start.isBefore(interval.opensAt()) && !end.isAfter(interval.closesAt());
     }
     private static Segment last(Journey journey) { return journey.segments().get(journey.segments().size() - 1); }
     private static void add(List<Conflict> conflicts, ConflictCode code, String reason, String id) {

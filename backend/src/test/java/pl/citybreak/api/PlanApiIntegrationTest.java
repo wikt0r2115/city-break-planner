@@ -23,7 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import pl.citybreak.persistence.PlanRepository;
 
-@SpringBootTest(properties = {"app.data-mode=demo", "app.frontend-base-url=http://localhost:5173", "app.cors.allowed-origins=http://localhost:5173"})
+@SpringBootTest(properties = {"app.data-mode=fixture", "app.frontend-base-url=http://localhost:5173", "app.cors.allowed-origins=http://localhost:5173"})
 @AutoConfigureMockMvc
 class PlanApiIntegrationTest {
     private static final Path DATABASE = database();

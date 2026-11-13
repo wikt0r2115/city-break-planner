@@ -9,6 +9,10 @@ import { promisify } from 'node:util';
 import { futureDate, launchBrowser, root } from './harness.mjs';
 
 const execute = promisify(execFile);
+const versions = await Promise.all([
+  execute('docker', ['version', '--format', '{{.Server.Version}}']),
+  execute('docker', ['compose', 'version', '--short']),
+]);
 const project = `city-break-test-${process.pid}-${Date.now()}`;
 const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'city-break-docker-'));
 const envFile = path.join(temporary, 'compose.env');
@@ -20,7 +24,7 @@ const port = listener.address().port;
 await new Promise((resolve) => listener.close(resolve));
 const origin = `http://localhost:${port}`;
 const environment = { ...process.env, APP_PORT: String(port), APP_BIND_ADDRESS: '127.0.0.1',
-  APP_DATA_MODE: 'demo' };
+  OPENAI_API_KEY: '' };
 delete environment.APP_FRONTEND_BASE_URL;
 delete environment.APP_CORS_ALLOWED_ORIGINS;
 const composePrefix = ['compose', '--project-name', project, '--env-file', envFile, '--file', path.join(root, 'compose.yaml')];
@@ -52,7 +56,7 @@ function cleanup() {
     }
     const ownedBrowser = browser || await browserPromise?.catch(() => undefined);
     await ownedBrowser?.close().catch(() => {});
-    try { await command(['down', '--volumes', '--remove-orphans']); }
+    try { await command(['down', '--volumes', '--remove-orphans', '--rmi', 'local']); }
     finally { await fs.rm(temporary, { recursive: true, force: true }); }
   })();
 }
@@ -79,7 +83,8 @@ async function healthy() {
 try {
   await command(['config', '--quiet']);
   console.log('Building and starting an isolated Docker Compose project…');
-  await command(['up', '--build', '--detach', '--wait', '--wait-timeout', '180']);
+  await command(['build', '--pull', '--no-cache']);
+  await command(['up', '--no-build', '--detach', '--wait', '--wait-timeout', '180']);
   await healthy();
   for (const service of ['backend', 'frontend']) {
     const id = (await command(['ps', '--quiet', service])).stdout.trim();
@@ -90,18 +95,26 @@ try {
   const missing = await request('GET', '/missing-docker-test');
   assert.equal(missing.status, 404);
   assert.ok(missing.headers.get('content-type')?.includes('application/problem+json'));
+  const places = await request('GET', '/places');
+  assert.equal(places.status, 200);
+  assert.deepEqual((await places.json()).places.map((place) => place.value), ['Amsterdam', 'Londyn', 'Paryż']);
   if (stopping) throw new Error('Docker test was stopped.');
   browserPromise = launchBrowser();
   browser = await browserPromise;
   const context = await browser.newContext({ viewport: { width: 360, height: 900 }, locale: 'pl-PL' });
   const page = await context.newPage();
   await page.goto(origin);
-  await page.locator('#origin').fill('Warszawa');
-  await page.locator('#destination').fill('Gdańsk');
+  await page.locator('#origin').fill('Londyn');
+  await page.locator('#destination').fill('Paryż');
   await page.locator('#departureDate').fill(futureDate(7));
   await page.locator('#returnDate').fill(futureDate(8));
   await page.getByRole('button', { name: /Znajdź połączenia/ }).click();
   await page.getByRole('heading', { name: 'Twój plan zwiedzania' }).waitFor();
+  await page.getByLabel('Budżet na wstępy (zł)').fill('0');
+  await page.getByRole('button', { name: 'Zaproponuj atrakcje' }).click();
+  await page.getByText('Propozycje z katalogu', { exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Dodaj do planu: Jardin des Tuileries' }).click();
+  await page.locator('.schedule').getByRole('heading', { name: 'Jardin des Tuileries' }).waitFor();
   await page.getByRole('button', { name: /Zapisz plan/ }).click();
   await page.waitForURL(/\/plans\/[^/]+$/);
   const id = new URL(page.url()).pathname.split('/').at(-1);
@@ -112,6 +125,7 @@ try {
   const owner = await request('GET', `/plans/${id}`, undefined, ownerToken);
   assert.equal(owner.status, 200);
   const saved = await owner.json();
+  assert.deepEqual(saved.items.map((item) => item.attractionId), ['tuileries']);
   const shareToken = new URL(shareUrl).pathname.split('/').at(-1);
   const publicContext = await browser.newContext();
   const publicPage = await publicContext.newPage();
@@ -127,11 +141,11 @@ try {
   const logOutput = await command(['logs', '--no-color']);
   const logs = logOutput.stdout + logOutput.stderr;
   assert.ok(!logs.includes(ownerToken) && !logs.includes(shareToken), 'Request tokens must not appear in container logs.');
-  await command(['up', '--detach', '--wait', '--wait-timeout', '180', '--force-recreate', 'backend']);
+  await command(['up', '--no-build', '--detach', '--wait', '--wait-timeout', '180', '--force-recreate', 'backend']);
   await healthy();
   assert.equal((await request('GET', `/plans/${id}`, undefined, ownerToken)).status, 200);
   await command(['down']);
-  await command(['up', '--detach', '--wait', '--wait-timeout', '180']);
+  await command(['up', '--no-build', '--detach', '--wait', '--wait-timeout', '180']);
   await healthy();
   const restored = await request('GET', `/plans/${id}`, undefined, ownerToken);
   assert.equal(restored.status, 200);
@@ -140,25 +154,11 @@ try {
   await publicPage.getByText('Tylko do odczytu', { exact: true }).waitFor();
   assert.equal((await request('DELETE', `/plans/${id}`, undefined, ownerToken)).status, 204);
   assert.equal((await request('GET', `/shared-plans/${shareToken}`)).status, 404);
-  let liveVerified = false;
-  if (process.env.DOCKER_TEST_LIVE_DATE) {
-    environment.APP_DATA_MODE = 'live';
-    await command(['up', '--detach', '--wait', '--wait-timeout', '180', '--force-recreate', 'backend']);
-    await healthy();
-    const date = process.env.DOCKER_TEST_LIVE_DATE;
-    const response = await request('POST', '/searches', { origin: 'Dworzec Główny', destination: 'Targ Rybny', departureDate: date, returnDate: date,
-      priority: 'LOWEST_TOTAL_COST', currency: 'PLN', fareType: 'STANDARD' });
-    assert.equal(response.status, 200);
-    const result = await response.json();
-    assert.equal(result.testData, false);
-    assert.ok(result.roundTripOptions.length > 0, 'The live container must return a real dated local journey.');
-    liveVerified = true;
-  }
   await fs.mkdir(path.join(root, 'e2e', 'artifacts'), { recursive: true });
   await fs.writeFile(path.join(root, 'e2e', 'artifacts', 'docker-report.json'), JSON.stringify({ checkedAt: new Date().toISOString(), dataMode: 'demo',
-    checks: ['build from source', 'healthy SQLite and same-origin API', 'non-root processes', 'backend not published', 'API errors remain JSON',
-      'browser search and save', 'SPA owner and public routes', 'correct share URL with custom port', 'public token cannot delete',
-      'no request tokens in logs after proxy outage', 'proxy recovery after backend recreation', 'SQLite persistence after compose down/up', 'owner deletion revokes link'],
-    liveVerified, liveDate: process.env.DOCKER_TEST_LIVE_DATE || null }, null, 2));
+    environment: { docker: versions[0].stdout.trim(), compose: versions[1].stdout.trim(), architecture: process.arch },
+    checks: ['fresh image build from source', 'fresh SQLite volume and same-origin API', 'non-root processes', 'backend not published', 'API errors remain JSON',
+      'browser search, catalog fallback and attraction saved', 'SPA owner and public routes', 'correct share URL with custom port', 'public token cannot delete',
+      'no request tokens in logs after proxy outage', 'proxy recovery after backend recreation', 'SQLite persistence after compose down/up', 'owner deletion revokes link'] }, null, 2));
   console.log('PASS Docker: source builds, frontend/API/SQLite, browser CRUD, private/public routing, non-root, safe logs, proxy recovery and persistent volume.');
 } finally { await cleanup(); }

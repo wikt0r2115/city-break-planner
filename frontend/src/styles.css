@@ -216,3 +216,6 @@ footer { flex-wrap: wrap; font-size: 9px; gap: 10px; }
 }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { scroll-behavior: auto !important; animation: none !important; }
 }
+.recommendation-form { display: grid; gap: 0.7rem; }
+.recommendation-form label { display: grid; gap: 0.35rem; }
+.recommendation-form button { justify-self: start; }

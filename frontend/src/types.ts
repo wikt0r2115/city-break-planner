@@ -3,7 +3,7 @@ export type FareType = 'STANDARD' | 'REDUCED';
 export type Criteria = { origin: string; destination: string; departureDate: string; returnDate: string; priority: Priority; currency: string; fareType: FareType };
 export type Source = { sourceId: string; url: string | null; checkedAt: string | null; status: 'OK' | 'NO_CONNECTION' | 'NO_COVERAGE' | 'PROVIDER_ERROR'; message: string | null; reasonCode?: string | null };
 export type Price = { status: 'KNOWN' | 'UNKNOWN' | 'PROVIDER_ERROR'; amount: string | null; currency: string; fareType: FareType; eligibility: string | null; sourceId: string; sourceUrl: string | null; checkedAt: string | null; reason?: string | null; testData?: boolean; basis?: 'LIVE_OFFER' | 'PUBLISHED_TARIFF' | 'TEST_DATA' | null };
-export type Place = { name: string; latitude: number | null; longitude: number | null };
+export type Place = { name: string; latitude: number | null; longitude: number | null; timeZone?: string };
 export type PlaceSuggestion = { value: string; label: string };
 export type PlaceCatalog = { places: PlaceSuggestion[]; testData: boolean };
 export type Segment = {
@@ -21,7 +21,6 @@ export type Segment = {
   scheduleSourceUrl?: string | null;
   schedulePublishedAt?: string | null;
   scheduleCheckedAt?: string | null;
-  discoverySourceUrl?: string | null;
 };
 export type Journey = { departureAt: string; arrivalAt: string; segments: Segment[] };
 export type CostSummary = { total: string | null; currency: string; fareType: FareType; complete: boolean; missingComponents: string[] };
@@ -32,3 +31,5 @@ export type ItemInput = { id: string; attractionId: string; startsAt: string | n
 export type PlanItem = { id: string; attractionId: string; name: string; startsAt: string; endsAt: string; transferMinutesFromPrevious: number | null; conflicts: { code: string; reason: string; itemId: string }[]; automaticTime?: boolean };
 export type Plan = { id: string | null; criteria: Criteria; selectedRoundTrip: RoundTrip; items: PlanItem[]; costSummary: CostSummary; createdAt: string | null; updatedAt: string | null; testData: boolean; shareUrl?: string | null };
 export type PlanInput = { criteria: Criteria; selectedRoundTrip: RoundTrip; items: ItemInput[] };
+export type Interest = 'CULTURE' | 'OUTDOORS' | 'HISTORY' | 'MIXED';
+export type Recommendations = { suggestions: { attractionId: string; reason: string }[]; aiUsed: boolean };

@@ -19,6 +19,9 @@ function mockApi() {
   const fetch = vi.fn(async (url: string, options: RequestInit = {}) => {
     if (url.endsWith('/places')) return json({ places: [], testData: true });
     if (url.includes('/searches')) return json(result);
+    if (url.endsWith('/recommendations')) return json({
+      suggestions: [{ attractionId: 'test-gallery', reason: 'Pasuje do zainteresowań.' }], aiUsed: false,
+    });
     if (url.endsWith('/plans/preview')) { const input = JSON.parse(String(options.body)) as PlanInput; previews.push(input); return json(planFor(input)); }
     if (url.endsWith('/plans') && options.method === 'POST') { const input = JSON.parse(String(options.body)) as PlanInput; return json({ plan: { ...planFor(input), id: savedPlan.id, shareUrl: savedPlan.shareUrl }, ownerToken: 'private-test-owner-token' }, 201); }
     if (url.includes('/shared-plans/')) { const { shareUrl: _private, ...publicPlan } = savedPlan; return json(publicPlan); }
@@ -32,6 +35,35 @@ function mockApi() {
 async function startPlan() { fillSearch(); fireEvent.click(screen.getByRole('button', { name: /Znajdź połączenia/ })); await screen.findByRole('heading', { name: 'Twój plan zwiedzania' }); await waitFor(() => expect(screen.getByRole('button', { name: /Zapisz plan/ })).toBeEnabled()); }
 
 describe('wyszukiwanie i planowanie z API', () => {
+  it('pobiera propozycje na żądanie i odświeża je przy zmianie powrotu', async () => {
+    const { fetch, previews } = mockApi();
+    render(<App />);
+    await startPlan();
+    const requested = () => fetch.mock.calls.filter(([url]) => url.endsWith('/recommendations'));
+    expect(requested()).toHaveLength(0);
+
+    const budget = screen.getByLabelText('Budżet na wstępy (zł)');
+    const recommend = screen.getByRole('button', { name: 'Zaproponuj atrakcje' });
+    fireEvent.change(budget, { target: { value: '-1' } });
+    fireEvent.click(recommend);
+    expect(budget).toHaveAttribute('aria-invalid', 'true');
+    expect(requested()).toHaveLength(0);
+    fireEvent.change(budget, { target: { value: '0' } });
+    fireEvent.change(screen.getByLabelText('Zainteresowania'), { target: { value: 'CULTURE' } });
+    fireEvent.click(recommend);
+    const add = await screen.findByRole('button', { name: 'Dodaj do planu: Galeria testowa' });
+    expect(JSON.parse(String(requested()[0][1]?.body))).toMatchObject({
+      roundTripId: result.roundTripOptions[0].id, interest: 'CULTURE', budgetPln: 0,
+    });
+    await waitFor(() => expect(add).toBeEnabled());
+    fireEvent.click(add);
+    await waitFor(() => expect(previews.at(-1)?.items.map((item) => item.attractionId)).toContain('test-gallery'));
+    await waitFor(() => expect(recommend).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: /^Wariant 2, powrót/ }));
+    await waitFor(() => expect(screen.queryByText('Propozycje z katalogu')).not.toBeInTheDocument());
+    expect(requested()).toHaveLength(1);
+  });
+
   it('waliduje pola i daty, ustawia komunikaty przy polach i fokus bez wyszukiwania połączeń', async () => {
     const { fetch } = mockApi();
     await act(async () => { render(<App />); });

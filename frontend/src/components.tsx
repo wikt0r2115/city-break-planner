@@ -43,12 +43,11 @@ export function SegmentSchedule({ segment }: { segment: Segment }) {
   </div>;
 }
 
-export function SegmentLinks({ segment, showDiscovery = false }: { segment: Segment; showDiscovery?: boolean }) {
+export function SegmentLinks({ segment }: { segment: Segment }) {
   return <div className="inline-links">
     <ExternalLink href={segment.bookingUrl}>Strona przewoźnika</ExternalLink>
     <ExternalLink href={segment.mapUrl}>Otwórz mapę</ExternalLink>
     <ExternalLink href={segment.scheduleSourceUrl}>Źródło rozkładu</ExternalLink>
-    {showDiscovery && <ExternalLink href={segment.discoverySourceUrl}>Źródło znalezione przez AI</ExternalLink>}
   </div>;
 }
 
@@ -59,16 +58,16 @@ export function SegmentPrices({ segment, compact }: { segment: Segment; compact?
   return <Prices prices={segment.prices} compact={compact} />;
 }
 
-const modes: Record<string, string> = { TRAIN: 'Pociąg', PLANE: 'Samolot', COACH: 'Autokar', FERRY: 'Prom', LOCAL_TRANSIT: 'Komunikacja miejska', WALK: 'Pieszo' };
+export const modes: Record<string, string> = { TRAIN: 'Pociąg', PLANE: 'Samolot', COACH: 'Autokar', FERRY: 'Prom', LOCAL_TRANSIT: 'Komunikacja miejska', BUS: 'Autobus', METRO: 'Metro', TRAM: 'Tramwaj', WALK: 'Pieszo' };
 export function JourneyDetails({ journey, label }: { journey: Journey; label: string }) {
   return <section className="journey" aria-label={label}>
     <h4>{label}</h4>
-    <p className="journey-times">{moment(journey.departureAt)} <span aria-hidden="true">→</span> {moment(journey.arrivalAt)}</p>
+    <p className="journey-times">{moment(journey.departureAt, journey.segments[0]?.origin.timeZone)} <span aria-hidden="true">→</span> {moment(journey.arrivalAt, journey.segments.at(-1)?.destination.timeZone)}</p>
     <ol className="segments">
       {journey.segments.map((segment) => <li key={segment.id}>
         <strong>{modes[segment.mode] || segment.mode} · {segment.operator}</strong>
         <p>{segment.origin.name} → {segment.destination.name}</p>
-        <p className="muted">{moment(segment.departureAt)} — {moment(segment.arrivalAt)}</p>
+        <p className="muted">{moment(segment.departureAt, segment.origin.timeZone)} — {moment(segment.arrivalAt, segment.destination.timeZone)}</p>
         <SegmentPrices segment={segment} />
         <SegmentSchedule segment={segment} />
         <SegmentLinks segment={segment} />
@@ -84,4 +83,4 @@ export function TripMetrics({ trip }: { trip: RoundTrip }) {
   </div>;
 }
 export function TripDetails({ trip }: { trip: RoundTrip }) { return <div className="trip-details"><TripMetrics trip={trip} /><JourneyDetails journey={trip.outbound} label="Wyjazd" /><JourneyDetails journey={trip.returnJourney} label="Powrót" /></div>; }
-export function ReadOnlyPlan({ plan }: { plan: Plan }) { return <><div className="section-heading"><div><p className="eyebrow">TWÓJ CZAS W MIEŚCIE</p><h2>{plan.criteria.origin} <span aria-hidden="true">→</span> {plan.criteria.destination}</h2><p>{plan.criteria.departureDate} — {plan.criteria.returnDate}</p></div><span className="readonly-badge">Tylko do odczytu</span></div>{plan.testData && <TestBanner />}<div className="public-layout"><section className="panel"><h3>Podróż w obie strony</h3><Cost summary={plan.costSummary} /><TripDetails trip={plan.selectedRoundTrip} /></section><section className="panel"><h3>Plan zwiedzania</h3>{plan.items.length === 0 ? <p>W tym planie nie wybrano jeszcze atrakcji.</p> : <ol className="schedule">{plan.items.map((item) => <li key={item.id}><h4>{item.name}</h4><p>{moment(item.startsAt)} — {moment(item.endsAt)}</p><p className="muted">{item.transferMinutesFromPrevious === null ? 'Brak potwierdzonego czasu dojazdu' : `Dojazd / dojście: ${duration(item.transferMinutesFromPrevious)}`}</p>{item.conflicts.length > 0 && <ul className="conflicts" aria-label={`Konflikty: ${item.name}`}>{item.conflicts.map((conflict, index) => <li key={`${conflict.code}-${index}`}>{conflict.reason}</li>)}</ul>}</li>)}</ol>}</section></div></>; }
+export function ReadOnlyPlan({ plan }: { plan: Plan }) { const zone = plan.selectedRoundTrip.outbound.segments.at(-1)?.destination.timeZone; return <><div className="section-heading"><div><p className="eyebrow">TWÓJ CZAS W MIEŚCIE</p><h2>{plan.criteria.origin} <span aria-hidden="true">→</span> {plan.criteria.destination}</h2><p>{plan.criteria.departureDate} — {plan.criteria.returnDate}</p></div><span className="readonly-badge">Tylko do odczytu</span></div>{plan.testData && <TestBanner />}<div className="public-layout"><section className="panel"><h3>Podróż w obie strony</h3><Cost summary={plan.costSummary} /><TripDetails trip={plan.selectedRoundTrip} /></section><section className="panel"><h3>Plan zwiedzania</h3>{plan.items.length === 0 ? <p>W tym planie nie wybrano jeszcze atrakcji.</p> : <ol className="schedule">{plan.items.map((item) => <li key={item.id}><h4>{item.name}</h4><p>{moment(item.startsAt, zone)} — {moment(item.endsAt, zone)}</p><p className="muted">{item.transferMinutesFromPrevious === null ? 'Brak potwierdzonego czasu dojazdu' : `Dojazd / dojście: ${duration(item.transferMinutesFromPrevious)}`}</p>{item.conflicts.length > 0 && <ul className="conflicts" aria-label={`Konflikty: ${item.name}`}>{item.conflicts.map((conflict, index) => <li key={`${conflict.code}-${index}`}>{conflict.reason}</li>)}</ul>}</li>)}</ol>}</section></div></>; }

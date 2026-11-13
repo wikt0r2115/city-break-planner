@@ -30,22 +30,18 @@ Brak dopasowania zwraca pustą tablicę.
 
 `value` trafia do `origin` lub `destination` w żądaniu wyszukiwania.
 `label` jest etykietą dla użytkownika. W trybie live katalog obejmuje
-przystanki linii 100 (Dworzec Główny i Targ Rybny) oraz stacje pilotażu SKM
-(Gdańsk Główny, Gdynia Główna, Wejherowo). Wyszukiwanie sprawdza, które pary
-i daty obejmuje rozkład. Dla obsługiwanej pary kolejowej odpowiedź podaje
-kanoniczne wartości `origin` i `destination` również po wpisaniu nazwy miasta.
-W trybie demo `testData: true` oznacza przykładowe podpowiedzi. Formularz
-pozwala też wpisać własną nazwę.
+Amsterdam, Londyn i Paryż z lokalnego katalogu SQLite. Wpisy „London” i
+„Paris” są akceptowane jako aliasy przy wyszukiwaniu. Wyniki i plany demo
+mają `testData: true`.
 
 ## Wyszukiwanie — SOL-117, SOL-119
 
-`POST /api/v1/searches` → HTTP 200. Parametr `discovery=false` pomija
-opcjonalne wywołanie AI przy odświeżaniu zapisanej trasy. Dane testowe żądania:
+`POST /api/v1/searches` → HTTP 200. Przykładowe żądanie:
 
 ```json
 {
-  "origin": "Warszawa",
-  "destination": "Gdańsk",
+  "origin": "Londyn",
+  "destination": "Paryż",
   "departureDate": "2026-12-05",
   "returnDate": "2026-12-06",
   "priority": "LOWEST_TOTAL_COST",
@@ -88,25 +84,33 @@ trasy lub daty przez źródło, a nie potwierdzony brak kursów.
 `UNRECOGNIZED_PUBLICATION` oznacza, że zmieniona treść publikacji nie
 pozwoliła bezpiecznie odczytać wymaganych danych.
 `AMBIGUOUS_PLACE` oznacza, że wpis pasuje do więcej niż jednej stacji.
-Opcjonalne wyszukiwanie AI dodaje `AI_NOT_CONFIGURED`, `AI_UNAVAILABLE`,
-`AI_NO_MATCH` lub `AI_VERIFIED`. Gdy AI nie dostarczy pełnej propozycji
-potwierdzonej dla obu kierunków, wyniki pochodzą z rozkładu SKM.
-Brak obsługi trasy zgłaszamy jako brak danych z uzasadnieniem, nie jako brak kursów.
+Wyszukiwanie transportu i obliczanie priorytetów korzysta z SQLite. Para
+spoza katalogu zwraca `UNSUPPORTED_ROUTE`. Gdy zapisane warianty nie
+pasują do dat, w szczególności powrót wypada przed przyjazdem, zwracany
+jest stan `NO_CONNECTION`.
 
 Wariant w obie strony: `id`, `outbound`, `returnJourney`, `travelMinutes`,
 `transfers`, `timeAtDestinationMinutes`, `costSummary`, `recommendedAttractionIds[]`.
 Przejazd: `departureAt`, `arrivalAt`, `segments[]` (kolejność podróży).
-Segment: `id`, `mode: TRAIN | PLANE | COACH | FERRY | LOCAL_TRANSIT | WALK`,
+Segment: `id`, `mode: TRAIN | PLANE | COACH | FERRY | LOCAL_TRANSIT | BUS | METRO | TRAM | WALK`,
 `operator`, `origin`, `destination`, `departureAt`, `arrivalAt`, `prices[]`,
 `bookingUrl` i `mapUrl` (URL lub null). Miejsca zawierają `name`,
 `latitude` i `longitude` (współrzędne mogą być null).
-W odcinkach kolejowych `scheduleSourceUrl` odsyła do publikacji źródła,
-`scheduleBasis` ma wartość `PLANNED` (planowany rozkład) lub `REALTIME`
-(aktualizacja na żywo). `schedulePublishedAt` i `scheduleCheckedAt` to czas
-publikacji oraz odczytu rozkładu. `discoverySourceUrl` jest opcjonalnym
-odnośnikiem z wyszukiwania AI i występuje tylko w wynikach wyszukiwania.
-Przeliczanie i zapis korzystają bezpośrednio z rozkładu SKM.
-Przejazdy wariantu muszą pozostawiać nieujemny czas na miejscu.
+Nowe miejsca zawierają opcjonalne `timeZone` (identyfikator IANA).
+Godziny odcinków zawierają przesunięcie właściwe dla lokalizacji i daty.
+Starsze zapisane plany mogą zawierać pola pochodzenia rozkładów.
+Przejazdy wariantu muszą pozostawiać dodatni czas na miejscu.
+
+## Propozycje atrakcji
+
+`POST /api/v1/recommendations` przyjmuje `criteria`, `roundTripId`,
+`interest` (`MIXED`, `CULTURE`, `OUTDOORS`, `HISTORY`) i `budgetPln`
+(liczba całkowita 0–10000). Zwraca `{suggestions: [{attractionId, reason}], aiUsed}`.
+Zbiór do trzech propozycji podlega kontroli wspólnego budżetu, godzin
+otwarcia, dojazdów oraz powrotu. Serwer odczytuje wariant i atrakcje z bazy.
+Klucz OpenAI pozwala nadać priorytet propozycjom po kliknięciu przycisku
+w UI. Przy braku odpowiedzi stosowany jest wybór z katalogu. Propozycje
+nie zmieniają planu automatycznie.
 
 ## Ceny i atrakcje
 
@@ -238,40 +242,10 @@ CORS dopuszcza jawne originy z `APP_CORS_ALLOWED_ORIGINS`, domyślnie
 `http://localhost:5173`, bez wildcard i bez cookies. Klucze dostawców są
 wyłącznie po stronie backendu; żadnych sekretów w zmiennych `VITE_*`.
 
-## Rozdzielenie danych rzeczywistych i testowych
+## Dane demonstracyjne
 
-Domyślny tryb odczytuje zatwierdzone źródła lokalne Gdańska; nie generuje
-ofert zastępujących brakujące integracje. Brak pokrycia albo niedostępność
-źródła mają jawny opis w `sources`. Przy użytecznych częściowych danych
-wynik ma `PARTIAL`; jeśli niczego nie udało się ustalić — `PROVIDER_ERROR`.
-Żaden z tych przypadków nie jest potwierdzonym brakiem kursów.
-Jawne `APP_DATA_MODE=demo` uruchamia
-kontrolowanego dostawcę testowego do weryfikacji logiki i widoków. Każdy taki wynik
-i zapisany na jego podstawie plan ma `testData: true`; frontend wyraźnie to
-oznacza. Nie są to rzeczywiste ceny ani rozkłady dla wskazanych dat.
+Rozkłady, ceny i godziny otwarcia pochodzą z lokalnego SQLite. Przykładowe
+taryfy mają `basis: TEST_DATA` i `checkedAt: null`.
 
-Publiczne linki mają postać `${APP_FRONTEND_BASE_URL}/shared/{shareToken}`;
-domyślne `APP_FRONTEND_BASE_URL` to `http://localhost:5173`.
-
-## Zakres zatwierdzonego etapu SOL-119
-
-Właściciel zatwierdził podłączenie potwierdzonych źródeł: linii 100
-w Gdańsku między przystankami Dworzec Główny i Targ Rybny, w zakresie dat
-publikowanym przez API, oraz dostępnych oficjalnych cenników atrakcji.
-Kolejne platformy o tej samej nazwie mogą mieć różne identyfikatory;
-połączenie powrotne nie musi używać tego samego ID przystanku co wyjazd.
-
-Rozkład dla dnia pochodzi z pola `date`, a nie eksportowej daty 1899
-w polach godzin. Źródło taryfy jest odrębne od źródła rozkładu. Niedostępny
-cennik lub warunki ulgi pozostają nieznane; 403 nie jest zastępowane ceną
-zapisaną wcześniej w kodzie. Niepotwierdzony czas dojścia do atrakcji
-daje `MISSING_DATA`, a nie wymyślony czas przejazdu.
-
-Wynik może ograniczać liczbę pokazanych wariantów do 24, **po** porównaniu
-wszystkich znalezionych par według wybranego priorytetu. Ograniczenie jest
-jawnie opisane w odpowiedzi źródła.
-
-To etap pośredni. Zakres kolei, samolotów, autokarów, promów, pozostałych
-tras i dostawców cen **wymaga doprecyzowania w dalszym etapie projektu**.
-Nie jest to deklaracja obsługi wszystkich środków transportu ani
-porównania rzeczywistych cen podróży Warszawa–Gdańsk.
+Publiczne linki mają postać `${APP_FRONTEND_BASE_URL}/shared/{shareToken}`.
+Domyślne `APP_FRONTEND_BASE_URL` to `http://localhost:5173`.

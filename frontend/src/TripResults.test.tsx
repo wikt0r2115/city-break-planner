@@ -74,7 +74,6 @@ describe('pilotaż rozkładów kolejowych', () => {
     scheduleSourceUrl: 'https://example.com/open-data',
     schedulePublishedAt: '2099-12-01',
     scheduleCheckedAt: '2099-12-02T13:00:00+01:00',
-    discoverySourceUrl: 'https://example.com/ai-reference',
   };
   const railTrip: RoundTrip = {
     ...regularTrip,
@@ -86,14 +85,13 @@ describe('pilotaż rozkładów kolejowych', () => {
       destination: railSegment.origin,
       scheduleBasis: 'REALTIME',
       schedulePublishedAt: null,
-      discoverySourceUrl: 'javascript:alert(1)',
     }] },
     costSummary: { ...regularTrip.costSummary, total: null, complete: false, missingComponents: ['rail'] },
   };
   const source = (reasonCode: string) => ({ ...result.sources[0], reasonCode });
 
   it('pokazuje stacje, metryki, pochodzenie i rodzaj rozkładu przy dostępnych kursach', () => {
-    render(<TripResults result={{ ...result, roundTripOptions: [railTrip], sources: [source('AI_UNAVAILABLE')] }} busy={false} onSelect={vi.fn()} />);
+    render(<TripResults result={{ ...result, roundTripOptions: [railTrip], sources: [source('UPSTREAM_FAILURE')] }} busy={false} onSelect={vi.fn()} />);
     const outbound = within(screen.getByRole('region', { name: 'Wyjazd' }));
     expect(outbound.getByText('Gdańsk Główny → Wejherowo')).toBeInTheDocument();
     expect(outbound.getByText(railSegment.operator)).toBeInTheDocument();
@@ -101,7 +99,6 @@ describe('pilotaż rozkładów kolejowych', () => {
     expect(outbound.getByText('1 gru 2099')).toHaveAttribute('datetime', '2099-12-01');
     expect(outbound.getByText('Cena niedostępna')).toBeInTheDocument();
     expect(outbound.getByRole('link', { name: 'Źródło rozkładu' })).toHaveAttribute('href', railSegment.scheduleSourceUrl);
-    expect(outbound.getByRole('link', { name: 'Źródło znalezione przez AI' })).toHaveAttribute('href', railSegment.discoverySourceUrl);
     const inbound = within(screen.getByRole('region', { name: 'Powrót' }));
     expect(inbound.getByText('Aktualizacja na żywo')).toBeInTheDocument();
     expect(inbound.getByText('Sprawdzono', { exact: false })).toBeInTheDocument();
@@ -122,7 +119,7 @@ describe('pilotaż rozkładów kolejowych', () => {
     ['PARTIAL', 'AMBIGUOUS_PLACE', 'Doprecyzuj miejsce'],
     ['PARTIAL', 'UNSUPPORTED_ROUTE', 'Trasa poza zakresem planera'],
     ['PARTIAL', 'OUTSIDE_COVERAGE', 'Brak rozkładu dla wybranych dat'],
-    ['PROVIDER_ERROR', 'AI_UNAVAILABLE', 'Wyszukiwanie AI jest chwilowo niedostępne'],
+    ['PROVIDER_ERROR', 'UPSTREAM_FAILURE', 'Nie udało się sprawdzić połączeń'],
     ['PROVIDER_ERROR', 'UPSTREAM_FAILURE', 'Nie udało się sprawdzić połączeń'],
   ])('pokazuje przyczynę pustego wyniku %s/%s', (status, reason, title) => {
     render(<TripResults result={{ ...result, status, roundTripOptions: [], sources: [source(reason)] }} busy={false} onSelect={vi.fn()} />);

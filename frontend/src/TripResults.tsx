@@ -1,5 +1,5 @@
 import { useState, useSyncExternalStore } from 'react';
-import { SegmentLinks, SegmentPrices, SegmentSchedule, TripMetrics } from './components';
+import { modes, SegmentLinks, SegmentPrices, SegmentSchedule, TripMetrics } from './components';
 import { moment, money } from './format';
 import type { Journey, SearchResult, RoundTrip } from './types';
 
@@ -20,12 +20,12 @@ function TripLeg({ journey, title }: { journey: Journey; title: string }) {
     <h4>{title}</h4>
     <ol className="segments">
       {journey.segments.map((segment) => <li key={segment.id}>
-        <strong>{segment.operator}</strong>
-        {segment.scheduleBasis && <p>{segment.origin.name} → {segment.destination.name}</p>}
-        <p className="journey-times">{moment(segment.departureAt)} <span aria-hidden="true">→</span> {moment(segment.arrivalAt)}</p>
+        <strong>{segment.origin.timeZone && modes[segment.mode] && `${modes[segment.mode]} · `}{segment.operator}</strong>
+        {(segment.scheduleBasis || segment.origin.timeZone) && <p>{segment.origin.name} → {segment.destination.name}</p>}
+        <p className="journey-times">{moment(segment.departureAt, segment.origin.timeZone)} <span aria-hidden="true">→</span> {moment(segment.arrivalAt, segment.destination.timeZone)}</p>
         <SegmentPrices segment={segment} compact />
         <SegmentSchedule segment={segment} />
-        <SegmentLinks segment={segment} showDiscovery />
+        <SegmentLinks segment={segment} />
       </li>)}
     </ol>
   </section>;
@@ -39,12 +39,13 @@ function TripCard({ trip, rank, selected, busy, onSelect }: {
   onSelect: (trip: RoundTrip) => void;
 }) {
   const { complete, total, currency } = trip.costSummary;
-  const hasTimetable = [...trip.outbound.segments, ...trip.returnJourney.segments].some((segment) => segment.scheduleBasis);
+  const showMetrics = [trip.outbound, trip.returnJourney].some((journey) =>
+    journey.segments.some((segment) => segment.scheduleBasis || segment.origin.timeZone));
   return <article className={selected ? 'trip-card chosen' : 'trip-card'}>
     <button
       type="button"
       className="trip-card-select"
-      aria-label={`Wariant ${rank}, powrót ${moment(trip.returnJourney.departureAt)}`}
+      aria-label={`Wariant ${rank}, powrót ${moment(trip.returnJourney.departureAt, trip.returnJourney.segments[0]?.origin.timeZone)}`}
       aria-pressed={selected}
       aria-disabled={busy}
       onClick={() => { if (!busy && !selected) onSelect(trip); }}
@@ -55,7 +56,7 @@ function TripCard({ trip, rank, selected, busy, onSelect }: {
       </div>
       {selected && <span className="selected-badge">Wybrany</span>}
     </div>
-    {hasTimetable && <TripMetrics trip={trip} />}
+    {showMetrics && <TripMetrics trip={trip} />}
     <TripLeg journey={trip.outbound} title="Wyjazd" />
     <TripLeg journey={trip.returnJourney} title="Powrót" />
   </article>;
@@ -72,20 +73,11 @@ export function emptySearchMessage({ status, sources }: SearchResult) {
   if (reasons.has('OUTSIDE_COVERAGE')) {
     return { style: 'empty', title: 'Brak rozkładu dla wybranych dat', hint: 'Wybierz termin objęty opublikowanym rozkładem.' };
   }
-  if (reasons.has('AI_UNAVAILABLE')) {
-    return { style: 'error', title: 'Wyszukiwanie AI jest chwilowo niedostępne', hint: 'Spróbuj ponownie.' };
-  }
   if (status === 'PROVIDER_ERROR') {
     return { style: 'error', title: 'Nie udało się sprawdzić połączeń', hint: 'Spróbuj ponownie.' };
   }
   if (reasons.has('UNSUPPORTED_ROUTE')) {
     return { style: 'empty', title: 'Trasa poza zakresem planera', hint: 'Wybierz inną parę miejsc z podpowiedzi.' };
-  }
-  if (reasons.has('AI_NOT_CONFIGURED')) {
-    return { style: 'empty', title: 'Wyszukiwanie AI jest wyłączone', hint: 'Wybierz trasę z dostępnym rozkładem.' };
-  }
-  if (reasons.has('AI_NO_MATCH')) {
-    return { style: 'empty', title: 'Brak połączeń potwierdzonych w rozkładzie', hint: 'Spróbuj wybrać inne miejsce lub datę.' };
   }
   return { style: 'warning', title: 'Nie udało się potwierdzić połączeń dla tych kryteriów.', hint: null };
 }

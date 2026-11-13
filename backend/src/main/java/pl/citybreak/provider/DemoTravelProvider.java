@@ -10,7 +10,7 @@ import pl.citybreak.model.Model.*;
 
 /** Explicit opt-in fixture provider. Nothing in this class represents an actual offer or tariff. */
 @Component
-@ConditionalOnProperty(name = "app.data-mode", havingValue = "demo")
+@ConditionalOnProperty(name = "app.data-mode", havingValue = "fixture")
 public class DemoTravelProvider implements TravelProvider {
     private static final ZoneId ZONE = ZoneId.of("Europe/Warsaw");
     private static final String SOURCE = "https://example.com/city-break-test-data";

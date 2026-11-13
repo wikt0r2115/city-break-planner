@@ -1,4 +1,4 @@
-import type { Criteria, PlaceCatalog, Plan, PlanInput, SearchResult } from './types';
+import type { Criteria, Interest, PlaceCatalog, Plan, PlanInput, Recommendations, SearchResult } from './types';
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1').replace(/\/+$/, '');
 const REQUEST_TIMEOUT_MS = 10000;
@@ -53,11 +53,18 @@ export async function getPlaceCatalog(signal?: AbortSignal): Promise<PlaceCatalo
   if (!isPlaceCatalog(body)) throw new ApiError('Aplikacja zwróciła nieprawidłowe podpowiedzi miejsc.');
   return body;
 }
-export async function searchTrips(criteria: Criteria, signal?: AbortSignal, discovery = true): Promise<SearchResult> {
-  const path = discovery ? '/searches' : '/searches?discovery=false';
-  const body = await request(path, 'POST', criteria, undefined, signal, SEARCH_TIMEOUT_MS);
+export async function searchTrips(criteria: Criteria, signal?: AbortSignal): Promise<SearchResult> {
+  const body = await request('/searches', 'POST', criteria, undefined, signal, SEARCH_TIMEOUT_MS);
   if (!isSearch(body)) throw new ApiError('Aplikacja zwróciła nieprawidłową odpowiedź wyszukiwania.');
   return body;
+}
+export async function suggestAttractions(criteria: Criteria, roundTripId: string, interest: Interest, budgetPln: number): Promise<Recommendations> {
+  const body = await request('/recommendations', 'POST', { criteria, roundTripId, interest, budgetPln }, undefined, undefined, 12000);
+  if (!record(body) || typeof body.aiUsed !== 'boolean' || !Array.isArray(body.suggestions)
+      || !body.suggestions.every((item) => record(item) && typeof item.attractionId === 'string' && typeof item.reason === 'string')) {
+    throw new ApiError('Nie udało się odczytać propozycji atrakcji.');
+  }
+  return body as Recommendations;
 }
 export async function previewPlan(input: PlanInput, signal?: AbortSignal): Promise<Plan> { return expectPlan(await request('/plans/preview', 'POST', input, undefined, signal)); }
 export async function createPlan(input: PlanInput): Promise<{ plan: Plan; ownerToken: string }> { const body = await request('/plans', 'POST', input); if (!record(body) || !isPlan(body.plan) || typeof body.ownerToken !== 'string' || !body.ownerToken) throw new ApiError('Aplikacja zwróciła nieprawidłowe potwierdzenie zapisu.'); return { plan: body.plan, ownerToken: body.ownerToken }; }

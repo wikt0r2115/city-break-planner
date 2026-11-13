@@ -139,7 +139,7 @@ try {
   const origin = `http://127.0.0.1:${frontendPort}`;
   const api = `http://127.0.0.1:${backendPort}/api/v1`;
   const backend = await launch(java, ['-jar', jar], root, {
-    APP_DATA_MODE: 'demo', SERVER_ADDRESS: '127.0.0.1', SERVER_PORT: String(backendPort),
+    APP_DATA_MODE: 'fixture', OPENAI_API_KEY: '', SERVER_ADDRESS: '127.0.0.1', SERVER_PORT: String(backendPort),
     SPRING_DATASOURCE_URL: `jdbc:sqlite:${path.join(work, 'plans.db')}`,
     APP_CORS_ALLOWED_ORIGINS: origin, APP_FRONTEND_BASE_URL: origin,
   }, 'backend');

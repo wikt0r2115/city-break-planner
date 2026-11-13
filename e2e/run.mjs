@@ -16,7 +16,7 @@ for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => { void cl
 
 try {
   await buildApp();
-  app = await startApp({ controlledFaults: true });
+  app = await startApp({ mode: 'fixture', controlledFaults: true });
   browser = await launchBrowser();
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'pl-PL', timezoneId: 'Europe/Warsaw' });
   page = await context.newPage();
@@ -209,7 +209,7 @@ try {
   });
 
   await check('actual backend process restart keeps plan and public link', async () => {
-    await app.restartBackend('demo');
+    await app.restartBackend('fixture');
     await page.reload();
     await page.getByRole('heading', { name: 'Twój plan zwiedzania' }).waitFor();
     await idle();

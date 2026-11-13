@@ -2,7 +2,7 @@ package pl.citybreak.persistence;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Optional;
 import org.springframework.dao.DataAccessResourceFailureException;
@@ -29,13 +29,13 @@ public class PlanRepository {
     public Optional<Stored> find(String id) {
         initialize();
         return jdbc.query("SELECT payload, owner_token_hash, share_token FROM plans WHERE id = ?",
-                (row, index) -> new Stored(decode(row.getString("payload")), row.getString("owner_token_hash"), row.getString("share_token")), id)
+                this::readStoredPlan, id)
                 .stream().findFirst();
     }
     public Optional<Stored> findShared(String token) {
         initialize();
         return jdbc.query("SELECT payload, owner_token_hash, share_token FROM plans WHERE share_token = ?",
-                (row, index) -> new Stored(decode(row.getString("payload")), row.getString("owner_token_hash"), row.getString("share_token")), token)
+                this::readStoredPlan, token)
                 .stream().findFirst();
     }
     public boolean update(Plan plan) {
@@ -46,6 +46,9 @@ public class PlanRepository {
     public boolean delete(String id) {
         initialize();
         return jdbc.update("DELETE FROM plans WHERE id = ?", id) == 1;
+    }
+    private Stored readStoredPlan(ResultSet row, int index) throws SQLException {
+        return new Stored(decode(row.getString("payload")), row.getString("owner_token_hash"), row.getString("share_token"));
     }
     private synchronized void initialize() {
         if (initialized) return;

@@ -6,7 +6,7 @@ docker compose up --build -d
 
 Adres aplikacji: `http://localhost:8080`. Domyślne wartości nie wymagają
 tworzenia pliku konfiguracyjnego. Pierwszy build wymaga dostępu do rejestru
-obrazów, Maven Central i npm; odczyt rzeczywistych źródeł wymaga internetu.
+obrazów, Maven Central i npm. Demo pobiera połączenia z lokalnego SQLite.
 
 ## Elementy środowiska
 
@@ -36,8 +36,9 @@ dostosuj wartości i dodawaj `--env-file .env.docker` do poleceń Compose.
 | `APP_PORT` | `8080` | Port aplikacji na komputerze użytkownika. |
 | `APP_BIND_ADDRESS` | `127.0.0.1` | Adres nasłuchu opublikowanego portu. |
 | `APP_FRONTEND_BASE_URL` | `http://localhost:${APP_PORT}` | Adres zapisanych linków i dozwolony origin API; zwykle nie wymaga ustawienia. |
-| `APP_DATA_MODE` | `live` | `demo` włącza wyłącznie oznaczone dane testowe. |
-| `APP_SOURCE_TIMEOUT_SECONDS` | `3` | Limit odczytu źródła, od 1 do 5 s. |
+| `OPENAI_API_KEY` | pusta | Opcjonalny klucz backendu do rekomendowania atrakcji. |
+| `APP_AI_MODEL` | `gpt-6-luna` | Model używany do rekomendowania atrakcji. |
+| `APP_AI_DAILY_REQUESTS` | `4` | Dzienny limit prób w procesie backendu. |
 
 Zmienne runtime przekazuje Compose. Frontend jest budowany z adresem
 `/api/v1`, więc przeglądarka nie próbuje połączyć się z nazwą kontenera.
@@ -73,23 +74,15 @@ npm ci
 npm run test:docker
 ```
 
-Test tworzy własny, unikalny projekt Compose, losowy port i osobny wolumen.
-Po sprawdzeniu usuwa wyłącznie własne kontenery, sieć i dane testowe.
-Sprawdza budowanie z kodu, SQLite, komunikację frontendu z API w przeglądarce,
-zapis, publiczny odczyt, trasy SPA, uprawnienia, logi bez tokenów, odtworzenie
-backendu oraz zachowanie planu po `down` i ponownym `up`.
+Test tworzy własny projekt Compose, losowy port i pusty wolumen. Buduje
+oba obrazy przez `docker compose build --pull --no-cache`. Sprawdza
+w przeglądarce wyszukanie połączeń, rekomendacje z katalogu przy pustym
+`OPENAI_API_KEY`, zapis atrakcji, publiczny odczyt i zachowanie planu po
+`down` i ponownym `up`. Na końcu usuwa zasoby swojego projektu testowego.
 
-Osobne sprawdzenie rzeczywistych źródeł w kontenerze wymaga daty
-w aktualnie opublikowanym rozkładzie:
-
-```bash
-DOCKER_TEST_LIVE_DATE=2026-11-14 npm run test:docker
-```
-
-Raport trafia do ignorowanego `e2e/artifacts/docker-report.json`.
-Docker nie rozszerza zatwierdzonego zakresu danych: linia 100 w Gdańsku
-i dostępne publikowane taryfy pozostają etapem pośrednim; szerszy zakres
-wymaga doprecyzowania w dalszym etapie projektu.
+Ten sam test uruchamia się w zadaniu „Docker Compose clean start” w CI.
+Raport jest dostępny jako artefakt przebiegu GitHub Actions i lokalnie
+w `e2e/artifacts/docker-report.json`.
 
 ### Wynik z 12 listopada 2026
 
