@@ -11,8 +11,8 @@ konflikty po zmianie powrotu oraz udostępnić zapisany plan do odczytu.
 
 Domyślny tryb `live` odczytuje rzeczywisty rozkład linii 100 w Gdańsku
 oraz dostępne oficjalne cenniki atrakcji. **Taryfa publikowana nie jest ofertą
-wycenioną dla konkretnej rezerwacji.** Każda cena pokazuje źródło i czas
-odczytu; niedostępne dane nie są zastępowane wymyślonymi wartościami.
+wycenioną dla konkretnej rezerwacji.** API zwraca źródło i czas odczytu ceny;
+niedostępne dane pozostają oznaczone jako niepotwierdzone.
 Pełny scenariusz reguł planera można też sprawdzić w jawnym trybie danych
 testowych opisanym niżej.
 
@@ -53,6 +53,21 @@ backend oraz utworzy bazę SQLite w trwałym wolumenie. W tym wariancie
 potrzebujesz tylko Dockera z Compose i obsługą kontenerów linuksowych;
 Java, Maven i Node są dostarczane przez obrazy. Pierwsze budowanie pobiera
 obrazy i zależności z internetu.
+
+### Szybkie sprawdzenie planera
+
+1. **Rzeczywisty rozkład ZTM.** Po domyślnym starcie otwórz formularz i kliknij
+   „Uzupełnij przykładową trasę”. Formularz uzupełni **Dworzec Główny → Targ Rybny**
+   oraz jutrzejszą datę w obu kierunkach. Zmień datę, jeśli źródło nie obejmuje
+   tego dnia, i kliknij „Znajdź połączenia”.
+2. **Pełne demo.** Włącz `APP_DATA_MODE=demo` w pliku `.env.docker` i uruchom
+   Compose z `--env-file .env.docker` według instrukcji poniżej. Kliknij
+   „Uzupełnij przykładową trasę”, wyszukaj **Warszawa → Gdańsk** z domyślną
+   taryfą normalną i priorytetem „Niższy koszt”, a następnie wybierz kartę
+   z powrotem o **14:00**. Harmonogram wskaże konflikt przy atrakcji. Zapisz
+   plan i otwórz link tylko do odczytu w osobnym oknie. Ten sam przebieg
+   pokazuje [demonstracja GIF](docs/media/demo.gif). Dane w tym trybie są
+   jawnie oznaczonymi przykładami.
 
 Frontend przekazuje `/api` do backendu przez Nginx. Linki do zapisanych
 planów używają tego samego adresu. SQLite działa wewnątrz backendu,
@@ -229,6 +244,28 @@ odpowiedzi API do sprawdzenia wyszukiwania, edytora i widoku publicznego.
 Build sprawdza TypeScript i tworzy `dist/`.
 Backend i Vite muszą działać jednocześnie, aby ręcznie sprawdzić pełne połączenie.
 W Windows użyj `mvnw.cmd` zamiast `./mvnw`; eksport zmiennych dostosuj do powłoki.
+
+### Uruchomienie w Windows PowerShell
+
+Z katalogu repozytorium uruchom backend w pierwszym terminalu. Aby sprawdzić
+scenariusz testowy, ustaw wcześniej w tym terminalu `$env:APP_DATA_MODE = 'demo'`.
+
+```powershell
+Set-Location backend
+.\mvnw.cmd -B -ntp package
+java -jar target/city-break-planner-0.0.1-SNAPSHOT.jar
+```
+
+Z katalogu repozytorium uruchom frontend w drugim terminalu.
+
+```powershell
+Set-Location frontend
+npm.cmd ci
+npm.cmd run dev
+```
+
+Otwórz **http://localhost:5173**. Tryb danych zmienisz po zatrzymaniu backendu
+i ponownym wykonaniu polecenia `java -jar` z odpowiednią wartością `APP_DATA_MODE`.
 
 Wyniki i granice aktualnego odbioru opisuje [raport SOL-120](docs/acceptance.md).
 [Raport SOL-115–118](docs/verification.md) zachowuje historię sprawdzenia

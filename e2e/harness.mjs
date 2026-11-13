@@ -16,7 +16,10 @@ const buildProcesses = new Set();
 const activeApps = new Set();
 
 async function run(command, args, cwd) {
-  const child = spawn(command, args, { cwd, env: executableEnv, stdio: ['ignore', 'inherit', 'inherit'] });
+  // Windows invokes the fixed Maven and npm .cmd build commands through cmd.exe.
+  const child = spawn(command, args, {
+    cwd, env: executableEnv, stdio: ['ignore', 'inherit', 'inherit'], shell: process.platform === 'win32',
+  });
   buildProcesses.add(child);
   try {
     const [code] = await once(child, 'exit');
