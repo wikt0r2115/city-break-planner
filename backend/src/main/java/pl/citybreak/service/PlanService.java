@@ -69,11 +69,11 @@ public class PlanService {
     }
     private Plan ownerView(Plan plan, String shareToken) {
         return new Plan(plan.id(), plan.criteria(), plan.selectedRoundTrip(), plan.items(), plan.costSummary(),
-                plan.createdAt(), plan.updatedAt(), plan.testData(), frontendBaseUrl + "/shared/" + shareToken);
+                plan.createdAt(), plan.updatedAt(), plan.testData(), frontendBaseUrl + "/shared/" + shareToken, plan.lodging());
     }
     private Plan persistable(Plan draft, String id, OffsetDateTime created, OffsetDateTime updated) {
         return new Plan(id, draft.criteria(), draft.selectedRoundTrip(), draft.items(), draft.costSummary(),
-                created, updated, draft.testData(), null);
+                created, updated, draft.testData(), null, draft.lodging());
     }
     private String token() {
         byte[] bytes = new byte[32];

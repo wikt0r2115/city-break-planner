@@ -116,12 +116,17 @@ try {
   await page.locator('#departureDate').fill(futureDate(7));
   await page.locator('#returnDate').fill(futureDate(8));
   await page.getByRole('button', { name: /Znajdź połączenia/ }).click();
-  await page.getByRole('heading', { name: 'Twój plan zwiedzania' }).waitFor();
+  await page.getByRole('heading', { name: 'Wybierz połączenie' }).waitFor();
+  await page.getByRole('button', { name: 'Dalej: Nocleg', exact: true }).click();
+  await page.getByRole('button', { name: 'Pomiń nocleg', exact: true }).click();
+  await page.getByText('Dobierz atrakcje', { exact: true }).click();
   await page.getByLabel('Budżet na wstępy (zł)').fill('0');
   await page.getByRole('button', { name: 'Zaproponuj atrakcje' }).click();
   await page.getByText('Propozycje z katalogu', { exact: true }).waitFor();
   await page.getByRole('button', { name: 'Dodaj do planu: Jardin des Tuileries' }).click();
+  await page.getByRole('button', { name: /^Harmonogram/ }).click();
   await page.locator('.schedule').getByRole('heading', { name: 'Jardin des Tuileries' }).waitFor();
+  await page.getByRole('button', { name: 'Dalej: Podsumowanie', exact: true }).click();
   await page.getByRole('button', { name: /Zapisz plan/ }).click();
   await page.waitForURL(/\/plans\/[^/]+$/);
   const id = new URL(page.url()).pathname.split('/').at(-1);
@@ -138,9 +143,10 @@ try {
   const publicPage = await publicContext.newPage();
   await publicPage.goto(shareUrl);
   await publicPage.getByText('Tylko do odczytu', { exact: true }).waitFor();
-  assert.equal(await publicPage.getByRole('button').count(), 0);
+  assert.equal(await publicPage.getByRole('button', { name: /Zapisz|Usuń|Przesuń|Dodaj/ }).count(), 0);
+  assert.equal(await publicPage.getByRole('textbox').count(), 0);
   await page.reload();
-  await page.getByRole('heading', { name: 'Twój plan zwiedzania' }).waitFor();
+  await page.getByRole('heading', { name: 'Twój wyjazd jest gotowy' }).waitFor();
   assert.equal((await request('DELETE', `/plans/${id}`, undefined, shareToken)).status, 403);
 
   await command(['stop', 'backend']);

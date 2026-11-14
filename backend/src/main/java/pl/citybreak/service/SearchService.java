@@ -65,9 +65,9 @@ public class SearchService {
         if (!allowedAttractions.containsAll(selectedAttractions))
             throw invalid("items", "Wybrana atrakcja nie jest dostępna w katalogu źródła.");
         RoundTrip selected = planner.withRecommendations(effectiveCriteria, raw, catalog.attractions());
-        var items = planner.schedule(selected, input.items(), catalog.attractions());
+        var items = planner.schedule(selected, input.items(), catalog.attractions(), input.lodging());
         var cost = planner.cost(effectiveCriteria, selected, selectedAttractions, catalog.attractions());
-        return new Plan(null, effectiveCriteria, selected, items, cost, null, null, catalog.testData(), null);
+        return new Plan(null, effectiveCriteria, selected, items, cost, null, null, catalog.testData(), null, input.lodging());
     }
     private ApiException invalid(String field, String message) {
         return new ApiException(400, "Popraw wskazane pola.", List.of(new FieldError(field, message)));

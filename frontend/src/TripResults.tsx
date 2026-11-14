@@ -4,18 +4,25 @@ import { moment, money } from './format';
 import type { Journey, SearchResult, RoundTrip } from './types';
 
 const wideResults = '(min-width: 1051px)';
+const mediumResults = '(min-width: 680px)';
 
 function subscribeToResultsWidth(notify: () => void) {
   const query = window.matchMedia?.(wideResults);
-  query?.addEventListener('change', notify);
-  return () => query?.removeEventListener('change', notify);
+  const medium = window.matchMedia?.(mediumResults);
+  query?.addEventListener('change', notify); medium?.addEventListener('change', notify);
+  return () => { query?.removeEventListener('change', notify); medium?.removeEventListener('change', notify); };
 }
 
 function variantsPerPage() {
-  return window.matchMedia?.(wideResults).matches ? 3 : 2;
+  return window.matchMedia?.(wideResults).matches ? 3 : window.matchMedia?.(mediumResults).matches ? 2 : 1;
 }
 
-function TripLeg({ journey, title }: { journey: Journey; title: string }) {
+function TripLeg({ journey, title, compact = false }: { journey: Journey; title: string; compact?: boolean }) {
+  if (compact) return <section className="journey trip-leg"><h4>{title}</h4>
+    <p className="journey-times">{moment(journey.departureAt, journey.segments[0]?.origin.timeZone)} → {moment(journey.arrivalAt, journey.segments.at(-1)?.destination.timeZone)}</p>
+    <p className="muted">{[...new Set(journey.segments.map((segment) => segment.operator))].join(' · ')}</p>
+    <details className="trip-leg-details"><summary>Ceny i etapy: {title.toLocaleLowerCase('pl')}</summary><TripLeg journey={journey} title={title} /></details>
+  </section>;
   return <section className="journey trip-leg" aria-label={title}>
     <h4>{title}</h4>
     <ol className="segments">
@@ -31,12 +38,14 @@ function TripLeg({ journey, title }: { journey: Journey; title: string }) {
   </section>;
 }
 
-function TripCard({ trip, rank, selected, busy, onSelect }: {
+function TripCard({ trip, rank, selected, busy, onSelect, compact = false, travelers = 1 }: {
   trip: RoundTrip;
   rank: number;
   selected: boolean;
   busy: boolean;
   onSelect: (trip: RoundTrip) => void;
+  compact?: boolean;
+  travelers?: number;
 }) {
   const { complete, total, currency } = trip.costSummary;
   const showMetrics = [trip.outbound, trip.returnJourney].some((journey) =>
@@ -53,12 +62,13 @@ function TripCard({ trip, rank, selected, busy, onSelect }: {
     <div className="trip-card-top">
       <div className="cost">
         <strong>{complete && total !== null ? money(total, currency) : 'Łączny koszt niepotwierdzony'}</strong>
+        <span>Przejazdy i proponowane wstępy · {travelers} os.</span>
       </div>
       {selected && <span className="selected-badge">Wybrany</span>}
     </div>
     {showMetrics && <TripMetrics trip={trip} />}
-    <TripLeg journey={trip.outbound} title="Wyjazd" />
-    <TripLeg journey={trip.returnJourney} title="Powrót" />
+    <TripLeg journey={trip.outbound} title="Wyjazd" compact={compact} />
+    <TripLeg journey={trip.returnJourney} title="Powrót" compact={compact} />
   </article>;
 }
 
@@ -91,13 +101,15 @@ function ResultStatus({ result }: { result: SearchResult }) {
   </div>;
 }
 
-export function TripResults({ result, selectedId, busy, onSelect }: {
+export function TripResults({ result, selectedId, busy, onSelect, compact = false }: {
   result: SearchResult;
   selectedId?: string;
   busy: boolean;
   onSelect: (trip: RoundTrip) => void;
+  compact?: boolean;
 }) {
-  const pageSize = useSyncExternalStore(subscribeToResultsWidth, variantsPerPage);
+  const defaultPageSize = useSyncExternalStore(subscribeToResultsWidth, variantsPerPage);
+  const pageSize = compact ? defaultPageSize : Math.max(2, defaultPageSize);
   const [visibleIndex, setVisibleIndex] = useState(0);
   const trips = result.roundTripOptions;
   const pageCount = Math.ceil(trips.length / pageSize);
@@ -111,12 +123,14 @@ export function TripResults({ result, selectedId, busy, onSelect }: {
     <ResultStatus result={result} />
     {trips.length > 0 && <div className="option-grid">
       {trips.slice(first, first + pageSize).map((trip, index) => <TripCard
+        travelers={result.criteria.travelers ?? 1}
         key={trip.id}
         trip={trip}
         rank={first + index + 1}
         selected={trip.id === selectedId}
         busy={busy}
         onSelect={onSelect}
+        compact={compact}
       />)}
     </div>}
     {pageCount > 1 && <nav className="results-pagination" aria-label="Strony wyników">

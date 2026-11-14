@@ -7,6 +7,8 @@ RUN --mount=type=cache,target=/root/.npm npm ci
 COPY index.html tsconfig.json vite.config.ts ./
 COPY src/ src/
 ENV VITE_API_BASE_URL=/api/v1
+ARG VITE_MAPTILER_API_KEY=""
+ENV VITE_MAPTILER_API_KEY=${VITE_MAPTILER_API_KEY}
 RUN npm run build
 
 FROM nginx:1.30.6-alpine AS runtime

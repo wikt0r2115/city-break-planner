@@ -7,6 +7,8 @@
   "scripts": {
     "test": "node run.mjs",
     "test:showcase": "node showcase.mjs",
+    "test:map": "node map.mjs",
+    "test:stays": "node stays.mjs",
     "test:docker": "node docker.mjs"
   },
   "devDependencies": { "playwright": "1.65.0" }

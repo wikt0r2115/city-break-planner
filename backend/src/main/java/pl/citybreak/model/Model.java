@@ -2,6 +2,7 @@ package pl.citybreak.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -20,8 +21,18 @@ public final class Model {
     public enum ScheduleBasis { PLANNED, REALTIME }
     public enum Interest { CULTURE, OUTDOORS, HISTORY, MIXED }
     public enum ConflictCode { RETURN_DEPARTURE, OPENING_HOURS, TRANSFER_TIME, MISSING_DATA }
+    public enum TransferBasis { ESTIMATED_WALKING }
     public record Criteria(String origin, String destination, LocalDate departureDate,
-            LocalDate returnDate, Priority priority, String currency, FareType fareType) {}
+            LocalDate returnDate, Priority priority, String currency, FareType fareType,
+            @JsonDeserialize(using = TravelerCountDeserializer.class) Integer travelers) {
+        public Criteria {
+            if (travelers == null) travelers = 1;
+        }
+        public Criteria(String origin, String destination, LocalDate departureDate,
+                LocalDate returnDate, Priority priority, String currency, FareType fareType) {
+            this(origin, destination, departureDate, returnDate, priority, currency, fareType, 1);
+        }
+    }
     public record Place(String name, Double latitude, Double longitude,
             @JsonInclude(JsonInclude.Include.NON_NULL) String timeZone) {
         public Place(String name, Double latitude, Double longitude) { this(name, latitude, longitude, null); }
@@ -81,14 +92,35 @@ public final class Model {
             this(id, attractionId, startsAt, visitMinutes, null);
         }
     }
-    public record PlanInput(Criteria criteria, RoundTrip selectedRoundTrip, List<ItemInput> items) {}
+    public record PlanInput(Criteria criteria, RoundTrip selectedRoundTrip, List<ItemInput> items,
+            @JsonInclude(JsonInclude.Include.NON_NULL) Place lodging) {
+        public PlanInput(Criteria criteria, RoundTrip selectedRoundTrip, List<ItemInput> items) {
+            this(criteria, selectedRoundTrip, items, null);
+        }
+    }
     public record Conflict(ConflictCode code, String reason, String itemId) {}
     public record PlanItem(String id, String attractionId, String name, OffsetDateTime startsAt,
             OffsetDateTime endsAt, Integer transferMinutesFromPrevious, List<Conflict> conflicts,
-            boolean automaticTime) {}
+            boolean automaticTime, Place location,
+            @JsonInclude(JsonInclude.Include.NON_NULL) TransferBasis transferBasis,
+            @JsonInclude(JsonInclude.Include.NON_NULL) String transferFrom) {
+        public PlanItem(String id, String attractionId, String name, OffsetDateTime startsAt,
+                OffsetDateTime endsAt, Integer transferMinutesFromPrevious, List<Conflict> conflicts,
+                boolean automaticTime, Place location) {
+            this(id, attractionId, name, startsAt, endsAt, transferMinutesFromPrevious, conflicts,
+                    automaticTime, location, null, null);
+        }
+    }
     public record Plan(String id, Criteria criteria, RoundTrip selectedRoundTrip, List<PlanItem> items,
             CostSummary costSummary, OffsetDateTime createdAt, OffsetDateTime updatedAt,
-            boolean testData, @JsonInclude(JsonInclude.Include.NON_NULL) String shareUrl) {}
+            boolean testData, @JsonInclude(JsonInclude.Include.NON_NULL) String shareUrl,
+            @JsonInclude(JsonInclude.Include.NON_NULL) Place lodging) {
+        public Plan(String id, Criteria criteria, RoundTrip selectedRoundTrip, List<PlanItem> items,
+                CostSummary costSummary, OffsetDateTime createdAt, OffsetDateTime updatedAt,
+                boolean testData, String shareUrl) {
+            this(id, criteria, selectedRoundTrip, items, costSummary, createdAt, updatedAt, testData, shareUrl, null);
+        }
+    }
     public record CreatedPlan(Plan plan, String ownerToken) {}
     public record FieldError(String field, String message) {}
 }

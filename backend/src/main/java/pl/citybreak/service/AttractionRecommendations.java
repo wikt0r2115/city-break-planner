@@ -43,6 +43,7 @@ public class AttractionRecommendations {
         for (Attraction attraction : catalog.attractions()) {
             BigDecimal price = planner.comparablePrice(attraction.entryPrices(), criteria);
             if (price == null) continue;
+            price = price.multiply(BigDecimal.valueOf(criteria.travelers()));
             var option = new Option(attraction, catalog.interestOf(attraction.id()), price);
             if (fits(List.of(option), trip, budget, catalog.attractions())) eligible.put(attraction.id(), option);
         }

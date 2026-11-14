@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.IOException;
 import java.nio.file.*;
 import java.time.*;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,6 +64,128 @@ class PlanApiIntegrationTest {
         mvc.perform(get("/api/v1/plans/" + id).header("Authorization", "Bearer " + owner)).andExpect(status().isNotFound());
         mvc.perform(get("/api/v1/shared-plans/" + share)).andExpect(status().isNotFound());
     }
+    @Test void travelerCountAndServerGroupPriceSurviveCreateUpdatePublicReadAndRepositoryRestart() throws Exception {
+        ObjectNode input = input("demo-budget");
+        ((ObjectNode) input.get("criteria")).put("travelers", 3);
+        ((ObjectNode) input.at("/selectedRoundTrip/costSummary")).put("total", "0.01");
+        mvc.perform(post("/api/v1/plans/preview").contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsBytes(input)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.criteria.travelers").value(3))
+                .andExpect(jsonPath("$.costSummary.total").value("240.00"))
+                .andExpect(jsonPath("$.selectedRoundTrip.costSummary.total").value("390.00"));
+        JsonNode created = create(input);
+        assertThat(created.at("/plan/criteria/travelers").asInt()).isEqualTo(3);
+        assertThat(created.at("/plan/costSummary/total").asText()).isEqualTo("240.00");
+        String id = created.at("/plan/id").asText();
+        String owner = "Bearer " + created.get("ownerToken").asText();
+        mvc.perform(get("/api/v1/plans/" + id).header("Authorization", owner))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.criteria.travelers").value(3))
+                .andExpect(jsonPath("$.costSummary.total").value("240.00"));
+        mvc.perform(get("/api/v1/shared-plans/" + share(created)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.criteria.travelers").value(3))
+                .andExpect(jsonPath("$.costSummary.total").value("240.00"));
+        var restarted = new PlanRepository(jdbc, json).find(id).orElseThrow().plan();
+        assertThat(restarted.criteria().travelers()).isEqualTo(3);
+        assertThat(restarted.costSummary().total()).isEqualTo("240.00");
+        ((ObjectNode) input.get("criteria")).put("travelers", 2);
+        input.putArray("items").addObject().put("id", "museum").put("attractionId", "demo-museum")
+                .putNull("startsAt").put("visitMinutes", 90);
+        mvc.perform(put("/api/v1/plans/" + id).header("Authorization", owner)
+                        .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsBytes(input)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.criteria.travelers").value(2))
+                .andExpect(jsonPath("$.costSummary.total").value("220.00"));
+        mvc.perform(get("/api/v1/shared-plans/" + share(created)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.criteria.travelers").value(2))
+                .andExpect(jsonPath("$.costSummary.total").value("220.00"));
+        mvc.perform(delete("/api/v1/plans/" + id).header("Authorization", owner)).andExpect(status().isNoContent());
+        mvc.perform(get("/api/v1/shared-plans/" + share(created))).andExpect(status().isNotFound());
+    }
+    @Test void lodgingNameAcceptsTheProviderLimitButRejectsLongerValues() throws Exception {
+        ObjectNode input = input("demo-budget");
+        input.putObject("lodging").put("name", "H".repeat(240)).put("latitude", 54.352).put("longitude", 18.653);
+        mvc.perform(post("/api/v1/plans/preview").contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsBytes(input)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.lodging.name").value("H".repeat(240)));
+        ((ObjectNode) input.get("lodging")).put("name", "H".repeat(241));
+        mvc.perform(post("/api/v1/plans/preview").contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsBytes(input)))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.errors[0].field").value("lodging.name"));
+    }
+
+    @Test void lodgingBaseAndEstimatedTransfersSurviveCrudPublicReadAndRepositoryRestart() throws Exception {
+        ObjectNode input = input("demo-budget");
+        input.putObject("lodging").put("name", "Wybrany hotel").put("latitude", 54.352).put("longitude", 18.653)
+                .put("hotelToken", "must-not-be-saved").put("totalPrice", "9999.00");
+        input.putArray("items").addObject().put("id", "museum").put("attractionId", "demo-museum")
+                .putNull("startsAt").put("visitMinutes", 90);
+        JsonNode created = create(input);
+        String id = created.at("/plan/id").asText();
+        String owner = "Bearer " + created.get("ownerToken").asText();
+        assertThat(created.at("/plan/lodging/name").asText()).isEqualTo("Wybrany hotel");
+        assertThat(created.at("/plan/items/0/transferBasis").asText()).isEqualTo("ESTIMATED_WALKING");
+        assertThat(created.at("/plan/lodging").has("hotelToken")).isFalse();
+        assertThat(created.at("/plan/lodging").has("totalPrice")).isFalse();
+        var restarted = new PlanRepository(jdbc, json).find(id).orElseThrow().plan();
+        assertThat(restarted.lodging().name()).isEqualTo("Wybrany hotel");
+        assertThat(restarted.items().get(0).transferBasis().name()).isEqualTo("ESTIMATED_WALKING");
+        mvc.perform(get("/api/v1/plans/" + id).header("Authorization", owner))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.lodging.name").value("Wybrany hotel"));
+        mvc.perform(get("/api/v1/shared-plans/" + share(created)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.lodging.name").value("Wybrany hotel"))
+                .andExpect(jsonPath("$.items[0].transferBasis").value("ESTIMATED_WALKING"));
+        input.remove("lodging");
+        mvc.perform(put("/api/v1/plans/" + id).header("Authorization", owner).contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsBytes(input)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.lodging").doesNotExist())
+                .andExpect(jsonPath("$.items[0].transferBasis").doesNotExist());
+        mvc.perform(get("/api/v1/shared-plans/" + share(created)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.lodging").doesNotExist());
+        mvc.perform(delete("/api/v1/plans/" + id).header("Authorization", owner)).andExpect(status().isNoContent());
+    }
+    @Test void invalidLodgingCoordinatesAreFieldErrors() throws Exception {
+        for (double latitude : new double[]{91, -91}) {
+            ObjectNode input = input("demo-budget");
+            input.putObject("lodging").put("name", "Hotel").put("latitude", latitude).put("longitude", 18.0);
+            mvc.perform(post("/api/v1/plans/preview").contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsBytes(input)))
+                    .andExpect(status().isBadRequest()).andExpect(jsonPath("$.errors[0].field").value("lodging.latitude"));
+        }
+    }
+    @Test void travelerCountRequiresAnIntegerInRangeAndDefaultsMissingOrNullToOne() throws Exception {
+        for (int count : new int[]{-1, 0, 9}) {
+            ObjectNode criteria = criteria().put("travelers", count);
+            mvc.perform(post("/api/v1/searches").contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsBytes(criteria)))
+                    .andExpect(status().isBadRequest()).andExpect(jsonPath("$.errors[0].field").value("travelers"));
+        }
+        for (JsonNode count : List.of(json.getNodeFactory().numberNode(1.5), json.getNodeFactory().textNode("3"),
+                json.getNodeFactory().booleanNode(true))) {
+            ObjectNode criteria = criteria(); criteria.set("travelers", count);
+            mvc.perform(post("/api/v1/searches").contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsBytes(criteria)))
+                    .andExpect(status().isBadRequest()).andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+        }
+        for (ObjectNode criteria : List.of(criteria(), criteria().putNull("travelers"))) {
+            mvc.perform(post("/api/v1/searches").contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsBytes(criteria)))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.criteria.travelers").value(1))
+                    .andExpect(jsonPath("$.roundTripOptions[0].costSummary.total").value("130.00"));
+        }
+        mvc.perform(post("/api/v1/searches").contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsBytes(criteria().put("travelers", 8))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.criteria.travelers").value(8))
+                .andExpect(jsonPath("$.roundTripOptions[0].costSummary.total").value("1040.00"));
+    }
+    @Test void storedLegacyPlanWithoutTravelerFieldStillReadsAsOneWithoutChangingItsPrices() throws Exception {
+        JsonNode created = create(input("demo-budget"));
+        String id = created.at("/plan/id").asText();
+        String payload = jdbc.queryForObject("SELECT payload FROM plans WHERE id = ?", String.class, id);
+        ObjectNode legacy = (ObjectNode) json.readTree(payload);
+        ((ObjectNode) legacy.get("criteria")).remove("travelers");
+        jdbc.update("UPDATE plans SET payload = ? WHERE id = ?", json.writeValueAsString(legacy), id);
+        var stored = new PlanRepository(jdbc, json).find(id).orElseThrow().plan();
+        assertThat(stored.criteria().travelers()).isEqualTo(1);
+        assertThat(stored.costSummary().total()).isEqualTo(legacy.at("/costSummary/total").asText());
+        mvc.perform(get("/api/v1/plans/" + id).header("Authorization", "Bearer " + created.get("ownerToken").asText()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.criteria.travelers").value(1))
+                .andExpect(jsonPath("$.costSummary.total").value("80.00"));
+        mvc.perform(get("/api/v1/shared-plans/" + share(created)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.criteria.travelers").value(1))
+                .andExpect(jsonPath("$.costSummary.total").value("80.00"));
+    }
     @Test void missingWrongPublicAndOtherOwnersCannotEditOrDelete() throws Exception {
         ObjectNode input = input("demo-budget");
         JsonNode first = create(input);
@@ -103,6 +226,52 @@ class PlanApiIntegrationTest {
                 .andExpect(jsonPath("$.createdAt").value(org.hamcrest.Matchers.nullValue()))
                 .andExpect(jsonPath("$.shareUrl").doesNotExist()).andExpect(jsonPath("$.ownerToken").doesNotExist());
         assertThat(jdbc.queryForObject("SELECT count(*) FROM plans", Integer.class)).isZero();
+    }
+    @Test void attractionLocationSurvivesPreviewSaveAndIndependentPublicRead() throws Exception {
+        ObjectNode input = input("demo-long");
+        input.putArray("items").addObject().put("id", "museum").put("attractionId", "demo-museum")
+                .putNull("startsAt").put("visitMinutes", 90);
+        JsonNode catalog = readResponse(mvc.perform(post("/api/v1/searches").contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsBytes(input.get("criteria")))).andExpect(status().isOk()));
+        JsonNode location = catalog.get("attractions").findValues("location").get(0);
+        assertThat(location.path("latitude").asDouble()).isEqualTo(54.351);
+        assertThat(location.path("longitude").asDouble()).isEqualTo(18.651);
+
+        JsonNode preview = readResponse(mvc.perform(post("/api/v1/plans/preview").contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsBytes(input))).andExpect(status().isOk()));
+        assertThat(preview.at("/items/0/location")).isEqualTo(location);
+        JsonNode created = create(input);
+        assertThat(created.at("/plan/items/0/location")).isEqualTo(location);
+        String id = created.at("/plan/id").asText();
+        assertThat(new PlanRepository(jdbc, json).find(id).orElseThrow().plan().items().get(0).location())
+                .isEqualTo(json.treeToValue(location, pl.citybreak.model.Model.Place.class));
+        JsonNode owner = readResponse(mvc.perform(get("/api/v1/plans/" + id)
+                        .header("Authorization", "Bearer " + created.get("ownerToken").asText())).andExpect(status().isOk()));
+        JsonNode shared = readResponse(mvc.perform(get("/api/v1/shared-plans/" + share(created)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.ownerToken").doesNotExist()));
+        assertThat(owner.at("/items/0/location")).isEqualTo(location);
+        assertThat(shared.at("/items/0/location")).isEqualTo(location);
+    }
+    @Test void legacySnapshotWithoutLocationRemainsReadableWithoutSchemaMigration() throws Exception {
+        ObjectNode input = input("demo-long");
+        input.putArray("items").addObject().put("id", "museum").put("attractionId", "demo-museum")
+                .putNull("startsAt").put("visitMinutes", 90);
+        JsonNode created = create(input);
+        String id = created.at("/plan/id").asText();
+        String payload = jdbc.queryForObject("SELECT payload FROM plans WHERE id = ?", String.class, id);
+        JsonNode legacySnapshot = json.readTree(payload);
+        ((ObjectNode) legacySnapshot.at("/items/0")).remove("location");
+        jdbc.update("UPDATE plans SET payload = ? WHERE id = ?", json.writeValueAsString(legacySnapshot), id);
+
+        assertThat(new PlanRepository(jdbc, json).find(id).orElseThrow().plan().items().get(0).location()).isNull();
+        JsonNode owner = readResponse(mvc.perform(get("/api/v1/plans/" + id)
+                        .header("Authorization", "Bearer " + created.get("ownerToken").asText())).andExpect(status().isOk()));
+        JsonNode shared = readResponse(mvc.perform(get("/api/v1/shared-plans/" + share(created))).andExpect(status().isOk()));
+        assertThat(owner.at("/items/0/location").isNull()).isTrue();
+        assertThat(shared.at("/items/0/location").isNull()).isTrue();
+        assertThat(visitStart(owner.at("/items/0"))).isEqualTo(visitStart(legacySnapshot.at("/items/0")));
+        assertThat(shared.at("/items/0/conflicts")).isEqualTo(legacySnapshot.at("/items/0/conflicts"));
+        assertThat(jdbc.queryForObject("PRAGMA user_version", Integer.class)).isEqualTo(1);
     }
     @Test void serverSchedulesNewItemsAndPreservesEveryItemWhenReturnChanges() throws Exception {
         ObjectNode input = input("demo-budget");

@@ -37,12 +37,27 @@ public class InputValidation {
         if (criteria.priority() == null) errors.add(new FieldError("priority", "Wybierz jeden priorytet."));
         if (!"PLN".equals(criteria.currency())) errors.add(new FieldError("currency", "Obsługiwana waluta porównania to PLN."));
         if (criteria.fareType() == null) errors.add(new FieldError("fareType", "Wybierz taryfę."));
+        if (criteria.travelers() < 1 || criteria.travelers() > 8)
+            errors.add(new FieldError("travelers", "Wybierz od 1 do 8 osób."));
         if (!errors.isEmpty()) fail(errors);
     }
     public void plan(PlanInput input) {
         if (input == null) fail(List.of(new FieldError("plan", "Podaj plan.")));
         criteria(input.criteria());
         List<FieldError> errors = new ArrayList<>();
+        Place lodging = input.lodging();
+        if (lodging != null) {
+            if (blank(lodging.name()) || lodging.name().length() > 240)
+                errors.add(new FieldError("lodging.name", "Podaj nazwę noclegu (maksymalnie 240 znaków)."));
+            if (lodging.latitude() == null || !Double.isFinite(lodging.latitude()) || Math.abs(lodging.latitude()) > 90)
+                errors.add(new FieldError("lodging.latitude", "Podaj poprawną szerokość geograficzną noclegu."));
+            if (lodging.longitude() == null || !Double.isFinite(lodging.longitude()) || Math.abs(lodging.longitude()) > 180)
+                errors.add(new FieldError("lodging.longitude", "Podaj poprawną długość geograficzną noclegu."));
+            if (lodging.timeZone() != null) {
+                try { ZoneId.of(lodging.timeZone()); }
+                catch (RuntimeException invalid) { errors.add(new FieldError("lodging.timeZone", "Podaj poprawną strefę czasową noclegu.")); }
+            }
+        }
         if (input.selectedRoundTrip() == null || blank(input.selectedRoundTrip().id()))
             errors.add(new FieldError("selectedRoundTrip", "Wybierz wariant podróży."));
         if (input.items() == null) errors.add(new FieldError("items", "Podaj listę punktów planu."));

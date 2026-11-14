@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import { Prices } from './components';
 import { duration } from './format';
 import type { Attraction, Interest, PlanItem, Recommendations } from './types';
@@ -10,19 +11,29 @@ type Props = {
   contextKey: string;
   onRecommend: (interest: Interest, budget: number) => Promise<Recommendations | null>;
   onAdd: (attraction: Attraction) => void;
+  compact?: boolean;
 };
 
-export function AttractionPicker({ attractions, selected, disabled, contextKey, onRecommend, onAdd }: Props) {
+function RecommendationPanel({ compact, children }: { compact: boolean; children: ReactNode }) {
+  return compact ? <details className="attraction-card recommendation-form"><summary>Dobierz atrakcje</summary>{children}</details>
+    : <section className="attraction-card recommendation-form"><h4>Dobierz atrakcje</h4>{children}</section>;
+}
+
+export function AttractionPicker({ attractions, selected, disabled, contextKey, onRecommend, onAdd, compact = false }: Props) {
   const [interest, setInterest] = useState<Interest>('MIXED');
   const [budget, setBudget] = useState('150');
   const [error, setError] = useState('');
   const [response, setResponse] = useState<{ contextKey: string; data: Recommendations } | null>(null);
+  const [page, setPage] = useState(0);
   const recommendations = response?.contextKey === contextKey ? response.data : null;
   const selectedIds = new Set(selected.map((item) => item.attractionId));
   useEffect(() => {
     setResponse(null);
     setError('');
+    setPage(0);
   }, [contextKey]);
+  const activePage = Math.min(page, Math.max(0, attractions.length - 1));
+  const displayed = compact ? attractions.slice(activePage, activePage + 1) : attractions;
 
   async function requestRecommendations() {
     const limit = Number(budget);
@@ -36,11 +47,10 @@ export function AttractionPicker({ attractions, selected, disabled, contextKey, 
     if (data) setResponse({ contextKey, data });
   }
 
-  return <aside className="attraction-list" aria-labelledby="attractions-title">
+  return <aside className={`attraction-list${compact ? ' is-compact attraction-list--compact' : ''}`} aria-labelledby="attractions-title">
     <h3 id="attractions-title">Jeszcze coś do odkrycia</h3>
     {attractions.length === 0 ? <p className="empty-note">Nie ma dostępnych propozycji atrakcji. Zapisane miejsca pozostają w planie.</p>
-      : <section className="attraction-card recommendation-form">
-        <h4>Dobierz atrakcje</h4>
+      : <RecommendationPanel compact={compact}>
         <label>Zainteresowania
           <select value={interest} disabled={disabled} onChange={(event) => {
             setInterest(event.target.value as Interest);
@@ -52,6 +62,7 @@ export function AttractionPicker({ attractions, selected, disabled, contextKey, 
             <option value="HISTORY">Historia</option>
           </select>
         </label>
+        <p className="muted">Budżet obejmuje wstępy dla całej grupy.</p>
         <label>Budżet na wstępy (zł)
           <input type="number" min="0" max="10000" step="1" value={budget} disabled={disabled}
             aria-invalid={!!error} aria-describedby={error ? 'attraction-budget-error' : undefined} onChange={(event) => {
@@ -79,12 +90,18 @@ export function AttractionPicker({ attractions, selected, disabled, contextKey, 
             </li>;
           })}</ul>}
         </div>}
-      </section>}
-    {attractions.map((attraction) => {
+      </RecommendationPanel>}
+    {compact && attractions.length > 1 && <nav className="compact-pagination" aria-label="Strony atrakcji">
+      <button type="button" className="text-button" disabled={activePage === 0} onClick={() => setPage((value) => Math.max(0, value - 1))}>Poprzednia atrakcja</button>
+      <span role="status">Atrakcja {activePage + 1} z {attractions.length}</span>
+      <button type="button" className="text-button" disabled={activePage >= attractions.length - 1} onClick={() => setPage((value) => Math.min(attractions.length - 1, value + 1))}>Następna atrakcja</button>
+    </nav>}
+    {displayed.map((attraction) => {
       const added = selectedIds.has(attraction.id);
       return <article className="attraction-card" key={attraction.id}>
         <h4>{attraction.name}</h4>
         <p className="muted">Na wizytę: {duration(attraction.visitMinutes)}</p>
+        <p className="muted">Bilety wstępu za 1 osobę</p>
         <Prices prices={attraction.entryPrices} />
         {attraction.openingHours.status === 'UNKNOWN' && <p className="warning-text">Godziny otwarcia niepotwierdzone</p>}
         <button type="button" className="secondary-button" disabled={disabled || added} onClick={() => onAdd(attraction)}>

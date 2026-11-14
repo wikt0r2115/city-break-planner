@@ -6,9 +6,12 @@ import type { PlanInput } from './types';
 import { criteria, earlyTrip, planFor, result, savedPlan } from './test/fixtures';
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
-beforeEach(() => { window.history.replaceState({}, '', '/'); localStorage.clear(); });
-afterEach(() => { window.history.replaceState({}, '', '/'); localStorage.clear(); });
+beforeEach(() => { window.history.replaceState({}, '', '/'); localStorage.clear(); sessionStorage.clear(); });
+afterEach(() => { window.history.replaceState({}, '', '/'); localStorage.clear(); sessionStorage.clear(); });
 function fillSearch() {
+  const navigation = screen.queryByRole('navigation', { name: 'Etapy planowania' });
+  const direction = navigation && within(navigation).getByRole('button', { name: 'Kierunek' });
+  if (direction && direction.getAttribute('aria-current') !== 'step') fireEvent.click(direction);
   fireEvent.change(screen.getByLabelText('Miejsce startu'), { target: { value: criteria.origin } });
   fireEvent.change(screen.getByLabelText('Cel podróży'), { target: { value: criteria.destination } });
   fireEvent.change(screen.getByLabelText('Data wyjazdu'), { target: { value: criteria.departureDate } });
@@ -18,7 +21,7 @@ function mockApi() {
   const previews: PlanInput[] = [];
   const fetch = vi.fn(async (url: string, options: RequestInit = {}) => {
     if (url.endsWith('/places')) return json({ places: [], testData: true });
-    if (url.includes('/searches')) return json(result);
+    if (url.includes('/searches')) return json({ ...result, criteria: JSON.parse(String(options.body)) });
     if (url.endsWith('/recommendations')) return json({
       suggestions: [{ attractionId: 'test-gallery', reason: 'Pasuje do zainteresowań.' }], aiUsed: false,
     });
@@ -32,9 +35,91 @@ function mockApi() {
   });
   vi.stubGlobal('fetch', fetch); return { fetch, previews };
 }
-async function startPlan() { fillSearch(); fireEvent.click(screen.getByRole('button', { name: /Znajdź połączenia/ })); await screen.findByRole('heading', { name: 'Twój plan zwiedzania' }); await waitFor(() => expect(screen.getByRole('button', { name: /Zapisz plan/ })).toBeEnabled()); }
+async function goStage(name: string) {
+  const button = within(screen.getByRole('navigation', { name: 'Etapy planowania' })).getByRole('button', { name });
+  await waitFor(() => expect(button).toBeEnabled()); fireEvent.click(button);
+}
+async function openSchedule() {
+  await goStage('Atrakcje'); fireEvent.click(screen.getByRole('button', { name: /^Harmonogram \(/ }));
+}
+async function openCatalog(name?: string) {
+  await goStage('Atrakcje'); fireEvent.click(screen.getByRole('button', { name: 'Propozycje' }));
+  if (name) for (let attempt = 0; attempt < 3 && !screen.queryByRole('heading', { name }); attempt++) {
+    const next = screen.getByRole('button', { name: 'Następna atrakcja' });
+    if (next.hasAttribute('disabled')) throw new Error(`Nie znaleziono atrakcji ${name}`);
+    fireEvent.click(next);
+  }
+}
+async function chooseEarlyTrip() {
+  await goStage('Połączenie');
+  if (!screen.queryByRole('button', { name: /^Wariant 2, powrót/ })) fireEvent.click(within(screen.getByRole('navigation', { name: 'Strony wyników' })).getByRole('button', { name: 'Następna' }));
+  fireEvent.click(screen.getByRole('button', { name: /^Wariant 2, powrót/ }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Dalej: Nocleg' })).toBeEnabled());
+}
+async function openSummary() {
+  const summary = within(screen.getByRole('navigation', { name: 'Etapy planowania' })).getByRole('button', { name: 'Podsumowanie' });
+  if (!summary.hasAttribute('disabled')) { fireEvent.click(summary); return; }
+  await goStage('Atrakcje');
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Dalej: Podsumowanie' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: 'Dalej: Podsumowanie' }));
+}
+async function startPlan() {
+  fillSearch(); fireEvent.click(screen.getByRole('button', { name: /Znajdź połączenia/ }));
+  await screen.findByRole('heading', { name: 'Wybierz połączenie' });
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Dalej: Nocleg' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: 'Dalej: Nocleg' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Pomiń nocleg' }));
+  await screen.findByRole('heading', { name: 'Twój plan zwiedzania' });
+  fireEvent.click(screen.getByRole('button', { name: 'Dodaj: Muzeum testowe' }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Dalej: Podsumowanie' })).toBeEnabled());
+}
+function openRecommendations() {
+  const summary = screen.getByText('Dobierz atrakcje'); const details = summary.closest('details');
+  if (details && !details.open) fireEvent.click(summary);
+}
 
 describe('wyszukiwanie i planowanie z API', () => {
+  it('Nowy plan resetuje atrakcje, wybór noclegu i przywracany szkic, zachowując zapisany plan', async () => {
+    mockApi(); render(<App />); await startPlan();
+    await openSchedule();
+    expect(screen.getByRole('heading', { name: 'Muzeum testowe' })).toBeInTheDocument();
+    await openSummary(); fireEvent.click(screen.getByRole('button', { name: /Zapisz plan/ }));
+    await screen.findByLabelText('Link tylko do odczytu');
+    fireEvent.click(screen.getByRole('button', { name: /Nowy plan/ }));
+    expect(window.location.pathname).toBe('/');
+    expect(screen.getByLabelText('Cel podróży')).toHaveValue('');
+    expect(document.querySelectorAll('.schedule > li')).toHaveLength(0);
+    expect(screen.queryByLabelText('Link tylko do odczytu')).not.toBeInTheDocument();
+    expect(localStorage.getItem('city-break-owner:saved-test')).toBeTruthy();
+    fillSearch(); fireEvent.click(screen.getByRole('button', { name: /Znajdź połączenia/ }));
+    await screen.findByRole('heading', { name: 'Wybierz połączenie' });
+    expect(document.querySelectorAll('.schedule > li')).toHaveLength(0);
+  });
+
+  it('wybiera liczbę osób w Kierunku i przekazuje ją do transportu oraz noclegu', async () => {
+    const { fetch } = mockApi(); render(<App />); fillSearch();
+    fireEvent.change(screen.getByLabelText('Liczba osób'), { target: { value: '3' } });
+    fireEvent.click(screen.getByRole('button', { name: /Znajdź połączenia/ }));
+    await screen.findByRole('heading', { name: 'Wybierz połączenie' });
+    expect(JSON.parse(String(fetch.mock.calls.find(([url]) => url.endsWith('/searches'))?.[1]?.body)).travelers).toBe(3);
+    fireEvent.click(screen.getByRole('button', { name: 'Dalej: Nocleg' }));
+    const stay = screen.getByRole('region', { name: 'Noclegi OBO Travel' });
+    expect(within(stay).queryByRole('spinbutton', { name: 'Liczba osób' })).not.toBeInTheDocument();
+    expect(within(stay).getByText(/3 os. dorosłych · 1 pokój/)).toBeInTheDocument();
+    await goStage('Kierunek');
+    expect(screen.getByLabelText('Liczba osób')).toHaveValue(3);
+    fireEvent.change(screen.getByLabelText('Liczba osób'), { target: { value: '4' } });
+    expect(within(screen.getByRole('navigation', { name: 'Etapy planowania' })).getByRole('button', { name: 'Nocleg' })).toBeDisabled();
+  });
+
+  it.each(['0', '9', '1.5'])('odrzuca niepoprawną liczbę osób %s przed wyszukiwaniem', async (value) => {
+    const { fetch } = mockApi(); render(<App />); fillSearch();
+    fireEvent.change(screen.getByLabelText('Liczba osób'), { target: { value } });
+    fireEvent.click(screen.getByRole('button', { name: /Znajdź połączenia/ }));
+    expect(screen.getByText('Wybierz od 1 do 8 osób.')).toBeInTheDocument();
+    expect(fetch.mock.calls.some(([url]) => url.endsWith('/searches'))).toBe(false);
+  });
+
   it('pobiera propozycje na żądanie i odświeża je przy zmianie powrotu', async () => {
     const { fetch, previews } = mockApi();
     render(<App />);
@@ -42,6 +127,7 @@ describe('wyszukiwanie i planowanie z API', () => {
     const requested = () => fetch.mock.calls.filter(([url]) => url.endsWith('/recommendations'));
     expect(requested()).toHaveLength(0);
 
+    openRecommendations();
     const budget = screen.getByLabelText('Budżet na wstępy (zł)');
     const recommend = screen.getByRole('button', { name: 'Zaproponuj atrakcje' });
     fireEvent.change(budget, { target: { value: '-1' } });
@@ -59,7 +145,7 @@ describe('wyszukiwanie i planowanie z API', () => {
     fireEvent.click(add);
     await waitFor(() => expect(previews.at(-1)?.items.map((item) => item.attractionId)).toContain('test-gallery'));
     await waitFor(() => expect(recommend).toBeEnabled());
-    fireEvent.click(screen.getByRole('button', { name: /^Wariant 2, powrót/ }));
+    await chooseEarlyTrip();
     await waitFor(() => expect(screen.queryByText('Propozycje z katalogu')).not.toBeInTheDocument());
     expect(requested()).toHaveLength(1);
   });
@@ -81,12 +167,15 @@ describe('wyszukiwanie i planowanie z API', () => {
     const { fetch } = mockApi(); render(<App />); fillSearch();
     fireEvent.click(screen.getByRole('radio', { name: /Krótszy dojazd/ }));
     fireEvent.click(screen.getByRole('button', { name: /Znajdź połączenia/ }));
-    await screen.findByRole('heading', { name: 'Twój plan zwiedzania' });
+    await screen.findByRole('heading', { name: 'Wybierz połączenie' });
+    for (const summary of screen.getAllByText(/^Ceny i etapy:/)) fireEvent.click(summary);
     const search = fetch.mock.calls.find(([url]) => url === 'http://localhost:8080/api/v1/searches');
     expect(JSON.parse(String(search?.[1]?.body)).priority).toBe('SHORTEST_TRAVEL_TIME');
-    expect(screen.getByText('Dane testowe — to nie są rzeczywiste oferty.')).toBeInTheDocument();
+    expect(await within(screen.getByRole('banner')).findByRole('note')).toHaveTextContent(/testowe|demonstracyjne/i);
     expect(screen.getAllByText('Ulgowa:', { exact: false }).length).toBeGreaterThan(0);
-    expect(screen.queryByText('Testowa ulga dla studentów.', { exact: false })).not.toBeInTheDocument();
+    expect(screen.getAllByText('Testowa ulga dla studentów.', { exact: false }).length).toBeGreaterThan(0);
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Strony wyników' })).getByRole('button', { name: 'Następna' }));
+    for (const summary of screen.getAllByText(/^Ceny i etapy:/)) fireEvent.click(summary);
     expect(screen.getAllByText('Łączny koszt niepotwierdzony').length).toBeGreaterThan(0);
     expect(screen.getAllByRole('link', { name: /Strona przewoźnika/ })[0]).toHaveAttribute('rel', 'noopener noreferrer');
     expect(screen.queryByText(/najtańsz/i)).not.toBeInTheDocument();
@@ -106,14 +195,18 @@ describe('wyszukiwanie i planowanie z API', () => {
 
   it('zachowuje punkty po wcześniejszym powrocie, pokazuje powód konfliktu i obsługuje dodanie, kolejność, usunięcie i zapis', async () => {
     const { fetch, previews } = mockApi(); render(<App />); await startPlan();
-    const original = previews[0].items[0];
-    fireEvent.click(screen.getByRole('button', { name: /^Wariant 2, powrót/ }));
+    const original = previews.find((preview) => preview.items.length > 0)!.items[0];
+    await chooseEarlyTrip();
+    await openSchedule();
     await screen.findByText('Nie zdążysz na wcześniejszy powrót po tej wizycie.');
     expect(previews.at(-1)?.selectedRoundTrip.id).toBe(earlyTrip.id);
     expect(previews.at(-1)?.items[0].id).toBe(original.id);
     expect(previews.at(-1)?.items[0].startsAt).not.toBeNull();
+    await openCatalog('Galeria testowa');
     await waitFor(() => expect(screen.getByRole('button', { name: 'Dodaj: Galeria testowa' })).toBeEnabled());
+    await openCatalog('Galeria testowa');
     fireEvent.click(screen.getByRole('button', { name: 'Dodaj: Galeria testowa' }));
+    await openSchedule();
     await screen.findByRole('button', { name: 'Przesuń Galeria testowa wcześniej' });
     await waitFor(() => expect(screen.getByRole('button', { name: 'Przesuń Galeria testowa wcześniej' })).toBeEnabled());
     fireEvent.click(screen.getByRole('button', { name: 'Przesuń Galeria testowa wcześniej' }));
@@ -121,6 +214,7 @@ describe('wyszukiwanie i planowanie z API', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Usuń Muzeum testowe' })).toBeEnabled());
     fireEvent.click(screen.getByRole('button', { name: 'Usuń Muzeum testowe' }));
     await waitFor(() => expect(previews.at(-1)?.items).toHaveLength(1));
+    await openSummary();
     await waitFor(() => expect(screen.getByRole('button', { name: /Zapisz plan/ })).toBeEnabled());
     fireEvent.click(screen.getByRole('button', { name: /Zapisz plan/ }));
     expect(await screen.findByText(/Plan zapisany. Możesz udostępnić/)).toBeInTheDocument();
@@ -138,7 +232,9 @@ describe('wyszukiwanie i planowanie z API', () => {
     render(<App />);
     await startPlan();
 
+    await openCatalog('Galeria testowa');
     fireEvent.click(screen.getByRole('button', { name: 'Dodaj: Galeria testowa' }));
+    await openSchedule();
     const moveGallery = await screen.findByRole('button', { name: 'Przesuń Galeria testowa wcześniej' });
     await waitFor(() => expect(moveGallery).toBeEnabled());
     fireEvent.click(moveGallery);
@@ -172,12 +268,13 @@ describe('wyszukiwanie i planowanie z API', () => {
   it('otwiera zapisany plan z uprawnieniem właściciela i odświeża katalog bez nadpisania punktów', async () => {
     const { fetch, previews } = mockApi(); localStorage.setItem('city-break-owner:saved-test', 'private-test-owner-token');
     window.history.replaceState({}, '', '/plans/saved-test'); render(<App />);
-    await screen.findByRole('heading', { name: 'Twój plan zwiedzania' });
+    await screen.findByRole('heading', { name: 'Twój wyjazd jest gotowy' });
     const read = fetch.mock.calls.find(([url, options]) => url.endsWith('/plans/saved-test') && options?.method === 'GET');
     expect(read?.[1]?.headers).toEqual(expect.objectContaining({ Authorization: 'Bearer private-test-owner-token' }));
-    expect(screen.getByRole('button', { name: 'Usuń Muzeum testowe' })).toBeInTheDocument();
     expect(previews).toHaveLength(0);
     expect(screen.getByRole('button', { name: /Zapisz zmiany/ })).toBeDisabled();
+    await openSchedule();
+    expect(screen.getByRole('button', { name: 'Usuń Muzeum testowe' })).toBeInTheDocument();
   });
 
   it('nieudany podgląd nowej trasy zachowuje zapisany plan i aktualizuje go zamiast tworzyć kopię', async () => {
@@ -193,18 +290,23 @@ describe('wyszukiwanie i planowanie z API', () => {
     localStorage.setItem('city-break-owner:saved-test', 'private-test-owner-token');
     window.history.replaceState({}, '', '/plans/saved-test');
     render(<App />);
-    await screen.findByRole('heading', { name: 'Twój plan zwiedzania' });
+    await screen.findByRole('heading', { name: 'Twój wyjazd jest gotowy' });
+    await goStage('Kierunek');
     await waitFor(() => expect(screen.getByRole('button', { name: /Znajdź połączenia/ })).toBeEnabled());
 
     fireEvent.change(screen.getByLabelText('Cel podróży'), { target: { value: 'Kraków' } });
     fireEvent.click(screen.getByRole('button', { name: /Znajdź połączenia/ }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Źródło podglądu jest niedostępne.');
+    expect(screen.getByRole('button', { name: 'Wróć do poprzedniego planu' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Wróć do poprzedniego planu' }));
+    await openSummary();
     expect(screen.getByLabelText('Link tylko do odczytu')).toHaveValue(savedPlan.shareUrl);
     expect(screen.getByRole('button', { name: 'Usuń zapisany plan' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Warszawa → Gdańsk' })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /^Wariant 2, powrót/ }));
+    await chooseEarlyTrip();
+    await openSchedule();
     await screen.findByText('Nie zdążysz na wcześniejszy powrót po tej wizycie.');
+    await openSummary();
     await waitFor(() => expect(screen.getByRole('button', { name: /Zapisz zmiany/ })).toBeEnabled());
     fireEvent.click(screen.getByRole('button', { name: /Zapisz zmiany/ }));
     await waitFor(() => expect(fetch.mock.calls.some(([url, options]) => url.endsWith('/plans/saved-test') && options?.method === 'PUT')).toBe(true));
@@ -222,16 +324,20 @@ describe('wyszukiwanie i planowanie z API', () => {
     localStorage.setItem('city-break-owner:saved-test', 'private-test-owner-token');
     window.history.replaceState({}, '', '/plans/saved-test');
     render(<App />);
-    await screen.findByRole('heading', { name: 'Twój plan zwiedzania' });
+    await screen.findByRole('heading', { name: 'Twój wyjazd jest gotowy' });
+    await goStage('Kierunek');
     await waitFor(() => expect(screen.getByRole('button', { name: /Znajdź połączenia/ })).toBeEnabled());
 
     fireEvent.change(screen.getByLabelText('Data powrotu'), { target: { value: '2099-12-07' } });
     fireEvent.click(screen.getByRole('button', { name: /Znajdź połączenia/ }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Poprzedni plan, wybrane punkty i uprawnienia zostały zachowane.');
+    fireEvent.click(screen.getByRole('button', { name: 'Wróć do poprzedniego planu' }));
+    await openSchedule();
     expect(screen.getByRole('button', { name: 'Usuń Muzeum testowe' })).toBeInTheDocument();
+    await openSummary();
     expect(screen.getByRole('button', { name: 'Usuń zapisany plan' })).toBeInTheDocument();
     expect(screen.getByLabelText('Link tylko do odczytu')).toHaveValue(savedPlan.shareUrl);
-    expect(screen.getByRole('heading', { name: 'Warszawa → Gdańsk' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Twój wyjazd jest gotowy' })).toBeInTheDocument();
     expect(previews).toHaveLength(0);
   });
 

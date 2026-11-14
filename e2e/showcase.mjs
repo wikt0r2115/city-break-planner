@@ -64,12 +64,17 @@ try {
   await page.locator('#returnDate').fill(criteria.returnDate);
   await page.getByRole('button', { name: /Znajdź połączenia/ }).click();
   await page.getByRole('heading', { name: 'Londyn → Paryż' }).waitFor();
+  await page.getByRole('button',{name:'Dalej: Nocleg',exact:true}).click();
+  await page.getByRole('button',{name:'Pomiń nocleg',exact:true}).click();
+  await page.getByText('Dobierz atrakcje',{exact:true}).click();
   await page.getByLabel('Zainteresowania').selectOption('OUTDOORS');
   await page.getByLabel('Budżet na wstępy (zł)').fill('0');
   await page.getByRole('button', { name: 'Zaproponuj atrakcje' }).click();
   await page.getByText('Propozycje z katalogu', { exact: true }).waitFor();
   await page.getByRole('button', { name: 'Dodaj do planu: Jardin des Tuileries' }).click();
+  await page.getByRole('button',{name:/^Harmonogram/}).click();
   await page.locator('.schedule').getByRole('heading', { name: 'Jardin des Tuileries' }).waitFor();
+  await page.getByRole('button',{name:'Dalej: Podsumowanie',exact:true}).click();
   await page.getByRole('button', { name: /Zapisz plan/ }).click();
   await page.getByLabel('Link tylko do odczytu').waitFor();
   console.log('PASS showcase: SQLite, all six directions, modes, ranking, recommendations fallback and browser save.');

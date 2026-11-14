@@ -9,6 +9,6 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     restoreMocks: true,
-    env: { VITE_API_BASE_URL: 'http://localhost:8080/api/v1' },
+    env: { VITE_API_BASE_URL: 'http://localhost:8080/api/v1', VITE_MAPTILER_API_KEY: '' },
   },
 });

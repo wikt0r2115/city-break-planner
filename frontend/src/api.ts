@@ -1,4 +1,4 @@
-import type { Criteria, Interest, PlaceCatalog, Plan, PlanInput, Recommendations, SearchResult } from './types';
+import type { Criteria, Interest, PlaceCatalog, Plan, PlanInput, Recommendations, SearchResult, StayCriteria, StayResult } from './types';
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1').replace(/\/+$/, '');
 const REQUEST_TIMEOUT_MS = 10000;
@@ -56,6 +56,48 @@ export async function getPlaceCatalog(signal?: AbortSignal): Promise<PlaceCatalo
 export async function searchTrips(criteria: Criteria, signal?: AbortSignal): Promise<SearchResult> {
   const body = await request('/searches', 'POST', criteria, undefined, signal, SEARCH_TIMEOUT_MS);
   if (!isSearch(body)) throw new ApiError('Aplikacja zwróciła nieprawidłową odpowiedź wyszukiwania.');
+  return body;
+}
+const isTimestamp = (value: unknown): value is string => typeof value === 'string' && Number.isFinite(Date.parse(value));
+const isAmount = (value: unknown): value is string => typeof value === 'string' && /^\d+(\.\d{1,4})?$/.test(value) && value.length <= 24 && Number.isFinite(Number(value));
+const nullableBoolean = (value: unknown) => value === null || typeof value === 'boolean';
+const nullableString = (value: unknown) => value === null || typeof value === 'string';
+export function isStayCriteria(value: unknown): value is StayCriteria {
+  const date = (input: unknown) => typeof input === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(input)
+    && Number.isFinite(Date.parse(input)) && new Date(input).toISOString().slice(0, 10) === input;
+  return record(value) && typeof value.destination === 'string' && value.destination.length <= 120
+    && date(value.checkIn) && date(value.checkOut) && typeof value.adults === 'number' && Number.isInteger(value.adults)
+    && value.adults >= 1 && value.adults <= 8 && ['PLN', 'EUR', 'USD', 'GBP'].includes(String(value.currency))
+    && (value.rooms === undefined || typeof value.rooms === 'number' && Number.isInteger(value.rooms) && value.rooms >= 1 && value.rooms <= value.adults);
+}
+export function isStayResult(value: unknown): value is StayResult {
+  if (!record(value) || !['OK', 'EMPTY', 'PARTIAL', 'PROVIDER_ERROR', 'RATE_LIMITED', 'UNAVAILABLE'].includes(String(value.status))
+    || value.source !== 'OBO Travel' || !isTimestamp(value.checkedAt) || !(value.expiresAt === null || isTimestamp(value.expiresAt))
+    || !isStayCriteria(value.criteria)
+    || !nullableString(value.message) || !(value.retryAfterSeconds === null || typeof value.retryAfterSeconds === 'number' && Number.isFinite(value.retryAfterSeconds) && value.retryAfterSeconds >= 0)
+    || !Array.isArray(value.hotels) || value.hotels.length > 3) return false;
+  const currency = value.criteria.currency;
+  return value.hotels.every((hotel) => record(hotel) && typeof hotel.hotelToken === 'string' && typeof hotel.name === 'string'
+    && (hotel.stars === null || typeof hotel.stars === 'number' && Number.isFinite(hotel.stars) && hotel.stars >= 0 && hotel.stars <= 5)
+    && isAmount(hotel.totalPrice) && (hotel.nightlyPrice === null || isAmount(hotel.nightlyPrice)) && hotel.currency === currency
+    && typeof hotel.bookingUrl === 'string' && nullableBoolean(hotel.taxesIncluded) && nullableBoolean(hotel.feesIncluded)
+    && (hotel.photoUrl === undefined || nullableString(hotel.photoUrl))
+    && (hotel.location === undefined || hotel.location === null || record(hotel.location)
+      && typeof hotel.location.latitude === 'number' && Number.isFinite(hotel.location.latitude) && Math.abs(hotel.location.latitude) <= 90
+      && typeof hotel.location.longitude === 'number' && Number.isFinite(hotel.location.longitude) && Math.abs(hotel.location.longitude) <= 180)
+    && nullableString(hotel.inclusionsNote) && isTimestamp(hotel.quotedAt) && isTimestamp(hotel.expiresAt)
+    && Date.parse(hotel.expiresAt) > Date.parse(hotel.quotedAt) && Array.isArray(hotel.extraCharges)
+    && hotel.extraCharges.every((charge) => record(charge) && typeof charge.name === 'string' && isAmount(charge.amount)
+      && typeof charge.currency === 'string' && /^[A-Z]{3}$/.test(charge.currency) && nullableString(charge.payableAt)));
+}
+export async function searchStays(criteria: StayCriteria, signal?: AbortSignal): Promise<StayResult> {
+  const body = await request('/stays/search', 'POST', criteria, undefined, signal, 30000);
+  if (!isStayResult(body)) throw new ApiError('Nie udało się odczytać ofert noclegów. Spróbuj ponownie.');
+  if (body.criteria.checkIn !== criteria.checkIn || body.criteria.checkOut !== criteria.checkOut || body.criteria.adults !== criteria.adults
+    || (body.criteria.rooms ?? 1) !== (criteria.rooms ?? 1)
+    || body.criteria.currency !== criteria.currency || body.criteria.destination.trim().toLocaleLowerCase() !== criteria.destination.trim().toLocaleLowerCase()) {
+    throw new ApiError('Oferty noclegów nie odpowiadają wybranym parametrom. Wyszukaj ponownie.');
+  }
   return body;
 }
 export async function suggestAttractions(criteria: Criteria, roundTripId: string, interest: Interest, budgetPln: number): Promise<Recommendations> {

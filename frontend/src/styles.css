@@ -20,6 +20,9 @@ button { border: 0; }
 small { font-size: 11px; }
 .page { max-width: 1280px; padding: 0 48px; margin: 0 auto; }
 .header { display: flex; align-items: center; justify-content: space-between; padding: 30px 0; border-bottom: 1px solid #dcded5; gap: 24px; }
+.header-start { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.new-plan-button { white-space: nowrap; color: #294a3f; background: #edf2e4; border-radius: 8px; padding: 8px 10px; }
+@media (max-width: 680px) { .header-start { flex-direction: column; gap: 5px; align-items: start; } .new-plan-button { font-size: 11px; min-height: 30px; } }
 .brand { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; font-weight: 750; font-size: 21px; line-height: 1.1; letter-spacing: -.8px; }
 .brand-mark { display: grid; place-items: center; color: #fff; background: #294a3f; width: 42px; height: 42px; border-radius: 12px; font-size: 30px; font-weight: 400; }
 .brand-subtitle { display: block; font-size: 9px; letter-spacing: 3.5px; margin-top: 6px; }
@@ -219,3 +222,66 @@ footer { flex-wrap: wrap; font-size: 9px; gap: 10px; }
 .recommendation-form { display: grid; gap: 0.7rem; }
 .recommendation-form label { display: grid; gap: 0.35rem; }
 .recommendation-form button { justify-self: start; }
+
+/* Keep the map separate from the editable schedule, including on small screens. */
+.trip-map-panel { margin: 0 0 24px; }
+.trip-map-panel .section-heading { margin-bottom: 16px; }
+.trip-map-panel h3 { margin: 6px 0 0; }
+.trip-map-frame { position: relative; overflow: hidden; border: 1px solid #dce1d4; border-radius: 12px; background: #edf2e4; }
+.trip-map-canvas { width: 100%; height: 380px; }
+.trip-map-message { position: absolute; top: 12px; left: 12px; right: 12px; margin: 0; padding: 12px; border-radius: 8px; background: #fffefaeF; font-size: 13px; pointer-events: none; }
+.trip-map-error { padding: 14px 0 0; color: #9c3b24; }
+.trip-map-error p { margin: 0 0 12px; }
+.trip-map-views { display: flex; flex-wrap: wrap; gap: 6px; }
+.trip-map-views button { min-height: 44px; padding: 8px 12px; border-radius: 8px; background: #edf2e4; color: #294a3f; font-size: 12px; }
+.trip-map-views button[aria-pressed=true] { background: #294a3f; color: white; }
+.trip-map-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 14px 0 0; font-size: 12px; }
+.trip-map-legend span { display: inline-flex; align-items: center; gap: 7px; }
+.trip-map-legend i { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+.visit-swatch { background: #294a3f; }
+.conflict-swatch { background: #a43828; }
+.stop-swatch { background: #446b9d; }
+.trip-map-marker { display: grid; place-items: center; border: 2px solid #fffefa; box-shadow: 0 2px 7px #243a3550; border-radius: 50%; color: white; font-weight: 750; font-size: 14px; padding: 0; }
+.trip-map-marker.visit-marker { width: 36px; height: 36px; background: #294a3f; }
+.trip-map-marker.stop-marker { width: 24px; height: 24px; background: #446b9d; font-size: 11px; }
+.trip-map-marker.hotel-marker { width: 36px; height: 36px; background: #75517b; border-radius: 10px; }
+.hotel-swatch { background: #75517b; border-radius: 3px !important; }
+.trip-map-marker.conflict-marker { background: #a43828; border-style: double; border-width: 4px; }
+.trip-map-marker:focus-visible { outline: 3px solid #b44d2d; outline-offset: 3px; z-index: 1; }
+.trip-map-canvas .maplibregl-popup-content { border-radius: 9px; padding: 14px; color: #243a35; font: 13px/1.6 Inter, ui-sans-serif, system-ui, sans-serif; }
+.trip-map-canvas .maplibregl-popup-close-button { min-width: 32px; min-height: 32px; }
+.trip-map-canvas .maplibregl-popup-content p { margin: 6px 0 0; }
+.trip-map-points { margin-top: 14px; font-size: 13px; }
+.trip-map-points summary { cursor: pointer; padding: 8px 0; }
+.trip-map-points summary:focus-visible { outline: 3px solid #b44d2d; outline-offset: 3px; }
+.trip-map-points li { padding: 8px 0; }
+.trip-map-points p { margin: 3px 0 0; }
+.trip-map-points button { min-height: 44px; text-align: left; }
+@media (max-width: 600px) {
+  .trip-map-panel .section-heading { align-items: start; flex-direction: column; gap: 12px; }
+  .trip-map-canvas { height: 300px; }
+  .trip-map-legend { flex-direction: column; }
+}
+
+.stay-search { margin: 24px 0; }
+.stay-search h3 { margin: 6px 0 0; }
+.stay-form-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr .65fr .7fr; gap: 12px; margin: 20px 0 16px; }
+.stay-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); list-style: none; padding: 0; gap: 16px; margin: 20px 0 0; }
+.stay-card { border: 1px solid #dce1d4; border-radius: 12px; padding: 20px; min-width: 0; }
+.stay-card p { margin: 8px 0; font-size: 13px; }
+.stay-card .stay-total { font-size: 13px; }
+.stay-total strong { font-size: 20px; }
+.stay-card .stay-source { color: #526a58; font-size: 12px; }
+.stay-stars { color: #775f20; white-space: nowrap; font-size: 12px; }
+.stay-fees { font-size: 12px; line-height: 1.6; }
+.stay-fees div { display: flex; flex-wrap: wrap; gap: 6px 12px; }
+.stay-fees dt { font-weight: 650; }
+.stay-fees dd { margin: 0; }
+.stay-extra-charges { padding-left: 20px; font-size: 12px; line-height: 1.7; }
+.stay-card a { display: inline-flex; align-items: center; min-height: 44px; font-size: 13px; }
+@media (max-width: 900px) { .stay-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .stay-form-grid > :first-child { grid-column: 1 / -1; } }
+@media (max-width: 600px) { .stay-cards { grid-template-columns: minmax(0, 1fr); } .stay-search .section-heading { align-items: start; flex-direction: column; gap: 10px; } }
+
+.stay-photo { display: block; width: 100%; height: 180px; object-fit: contain; border-radius: 8px; background: #f3f3ec; margin-bottom: 16px; }
+.stay-photo-placeholder { display: grid; place-items: center; min-height: 100px; border-radius: 8px; background: #f3f3ec; color: #667265; font-size: 12px; margin-bottom: 16px; }
+.stay-card .stay-map-button { display: block; min-height: 44px; margin-top: 8px; }

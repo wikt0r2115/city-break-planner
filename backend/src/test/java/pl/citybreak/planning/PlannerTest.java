@@ -16,6 +16,72 @@ class PlannerTest {
     private Criteria criteria(Priority priority) {
         return new Criteria("Warszawa", "Gdańsk", LocalDate.parse("2026-12-05"), LocalDate.parse("2026-12-06"), priority, "PLN", FareType.STANDARD);
     }
+    @Test void lodgingDetourChangesAutomaticFirstVisitAndKeepsGroupPriceUnchanged() {
+        Criteria criteria = criteria(Priority.LOWEST_TOTAL_COST);
+        RoundTrip trip = option(searches.search(criteria), "demo-budget");
+        List<ItemInput> items = List.of(new ItemInput("museum", "demo-museum", null, 90));
+        Place near = new Place("Hotel przy muzeum", 54.351, 18.651);
+        Place far = new Place("Hotel poza centrum", 54.8, 19.1);
+        Plan without = searches.preview(new PlanInput(criteria, trip, items));
+        Plan nearby = searches.preview(new PlanInput(criteria, trip, items, near));
+        Plan distant = searches.preview(new PlanInput(criteria, trip, items, far));
+        assertThat(distant.items().get(0).startsAt()).isAfter(nearby.items().get(0).startsAt());
+        assertThat(distant.items().get(0).transferMinutesFromPrevious())
+                .isGreaterThan(nearby.items().get(0).transferMinutesFromPrevious());
+        assertThat(distant.items().get(0).transferBasis()).isEqualTo(TransferBasis.ESTIMATED_WALKING);
+        assertThat(distant.items().get(0).transferFrom()).contains("Hotel poza centrum");
+        assertThat(distant.lodging()).isEqualTo(far);
+        assertThat(distant.costSummary()).isEqualTo(without.costSummary());
+        assertThat(without.lodging()).isNull();
+        assertThat(without.items().get(0).transferBasis()).isNull();
+        assertThat(Planner.estimatedWalkingMinutes(near, near)).isZero();
+    }
+
+    @Test void lodgingPreservesManualTimesAndFlagsInsufficientTransferAndReturnTime() {
+        Criteria criteria = criteria(Priority.LOWEST_TOTAL_COST);
+        RoundTrip trip = option(searches.search(criteria), "demo-budget");
+        Place far = new Place("Odległy hotel", 60.0, 20.0);
+        OffsetDateTime manual = trip.outbound().arrivalAt().plusMinutes(5);
+        Plan plan = searches.preview(new PlanInput(criteria, trip,
+                List.of(new ItemInput("museum", "demo-museum", manual, 90)), far));
+        assertThat(plan.items().get(0).startsAt()).isEqualTo(manual);
+        assertThat(plan.items().get(0).conflicts()).extracting(Conflict::code).contains(ConflictCode.TRANSFER_TIME);
+        Plan automatic = searches.preview(new PlanInput(criteria, trip,
+                List.of(new ItemInput("museum", "demo-museum", null, 90)), far));
+        assertThat(automatic.items().get(0).conflicts()).extracting(Conflict::code).contains(ConflictCode.RETURN_DEPARTURE);
+    }
+
+    @Test void lodgingIsNotRepeatedBetweenSameDayVisitsButIsUsedBetweenDays() {
+        Criteria criteria = criteria(Priority.LOWEST_TOTAL_COST);
+        RoundTrip trip = option(searches.search(criteria), "demo-budget");
+        Place lodging = new Place("Baza noclegowa", 54.352, 18.653);
+        Plan plan = searches.preview(new PlanInput(criteria, trip, List.of(
+                new ItemInput("museum", "demo-museum", null, 90),
+                new ItemInput("park", "demo-park", null, 45),
+                new ItemInput("gallery", "demo-gallery", OffsetDateTime.parse("2026-12-06T15:00:00+01:00"), 60)), lodging));
+        assertThat(plan.items().get(0).transferBasis()).isEqualTo(TransferBasis.ESTIMATED_WALKING);
+        assertThat(plan.items().get(1).transferBasis()).isNull();
+        assertThat(plan.items().get(2).transferBasis()).isEqualTo(TransferBasis.ESTIMATED_WALKING);
+        assertThat(plan.items().get(2).transferFrom()).contains("Park", "Baza noclegowa");
+    }
+
+    @Test void lodgingNeverTurnsMissingCoordinatesIntoAZeroDurationAndValidatesInput() {
+        Criteria criteria = criteria(Priority.LOWEST_TOTAL_COST);
+        var catalog = provider.search(criteria);
+        Attraction original = catalog.attractions().get(0);
+        Attraction missing = new Attraction(original.id(), original.name(), new Place("Brak lokalizacji", null, null),
+                original.visitMinutes(), original.entryPrices(), original.openingHours(), original.sources());
+        Place lodging = new Place("Hotel", 54.352, 18.653);
+        var items = planner.schedule(catalog.options().get(0), List.of(new ItemInput("missing", missing.id(), null, 90)), List.of(missing), lodging);
+        assertThat(items.get(0).transferMinutesFromPrevious()).isNull();
+        assertThat(items.get(0).conflicts()).extracting(Conflict::code).contains(ConflictCode.MISSING_DATA);
+        for (Place invalid : List.of(new Place("", 54.0, 18.0), new Place("Hotel", null, 18.0),
+                new Place("Hotel", Double.NaN, 18.0), new Place("Hotel", 91.0, 18.0),
+                new Place("Hotel", 54.0, 181.0), new Place("Hotel", 54.0, 18.0, "Bad/Zone"))) {
+            assertThatThrownBy(() -> searches.preview(new PlanInput(criteria, catalog.options().get(0), List.of(), invalid)))
+                    .isInstanceOfSatisfying(ApiException.class, error -> assertThat(error.status()).isEqualTo(400));
+        }
+    }
     @Test void lowestCostCountsBothJourneysAndRecommendedAdmissions() {
         var search = searches.search(criteria(Priority.LOWEST_TOTAL_COST));
         RoundTrip winner = search.roundTripOptions().get(0);
@@ -29,6 +95,31 @@ class PlannerTest {
     }
     @Test void shortestTravelTimeUsesBothDirections() {
         assertThat(searches.search(criteria(Priority.SHORTEST_TRAVEL_TIME)).roundTripOptions().get(0).id()).isEqualTo("demo-fast");
+    }
+    @Test void groupCostsMultiplyBothJourneysAndAdmissionsWithoutChangingUnitPrices() {
+        Criteria individual = criteria(Priority.LOWEST_TOTAL_COST);
+        Criteria group = new Criteria(individual.origin(), individual.destination(), individual.departureDate(),
+                individual.returnDate(), individual.priority(), individual.currency(), individual.fareType(), 3);
+        RoundTrip individualTrip = option(searches.search(individual), "demo-budget");
+        RoundTrip groupTrip = option(searches.search(group), "demo-budget");
+        assertThat(individualTrip.costSummary().total()).isEqualTo("130.00");
+        assertThat(groupTrip.costSummary().total()).isEqualTo("390.00");
+        assertThat(groupTrip.outbound().segments().get(0).prices())
+                .isEqualTo(individualTrip.outbound().segments().get(0).prices());
+        RoundTrip fake = new RoundTrip("demo-budget", null, null, 0, 0, 0,
+                new CostSummary("0.01", "PLN", FareType.STANDARD, true, List.of()), List.of());
+        assertThat(searches.preview(new PlanInput(group, fake, List.of())).costSummary().total()).isEqualTo("240.00");
+        Plan withMuseum = searches.preview(new PlanInput(group, fake,
+                List.of(new ItemInput("museum", "demo-museum", null, 90))));
+        assertThat(withMuseum.costSummary().total()).isEqualTo("330.00");
+        assertThat(option(searches.search(group), "demo-unknown").costSummary())
+                .satisfies(summary -> { assertThat(summary.total()).isNull(); assertThat(summary.complete()).isFalse(); });
+    }
+    @Test void groupReducedFareStillUsesComparableUnitPrices() {
+        Criteria base = criteria(Priority.LOWEST_TOTAL_COST);
+        Criteria group = new Criteria(base.origin(), base.destination(), base.departureDate(),
+                base.returnDate(), base.priority(), base.currency(), FareType.REDUCED, 3);
+        assertThat(option(searches.search(group), "demo-budget").costSummary().total()).isEqualTo("195.00");
     }
     @Test void fewestTransfersUsesBothDirections() {
         assertThat(searches.search(criteria(Priority.FEWEST_TRANSFERS)).roundTripOptions().get(0).id()).isEqualTo("demo-direct");

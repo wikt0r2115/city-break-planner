@@ -39,12 +39,24 @@ dostosuj wartości i dodawaj `--env-file .env.docker` do poleceń Compose.
 | `OPENAI_API_KEY` | pusta | Opcjonalny klucz backendu do rekomendowania atrakcji. |
 | `APP_AI_MODEL` | `gpt-6-luna` | Model używany do rekomendowania atrakcji. |
 | `APP_AI_DAILY_REQUESTS` | `4` | Dzienny limit prób w procesie backendu. |
+| `VITE_MAPTILER_API_KEY` | pusta | Publiczny klucz mapy MapTiler, przekazywany podczas budowania frontendu. |
+| `APP_OBO_ENABLED` | `true` | Włącza testową sekcję rzeczywistych noclegów OBO. |
+| `APP_OBO_TIMEOUT_SECONDS` | `25` | Limit odczytu OBO w sekundach, zakres 1–30. |
+| `OBO_API_KEY` | pusta | Opcjonalny poufny klucz OBO, przekazywany wyłącznie backendowi. |
 
 Zmienne runtime przekazuje Compose. Frontend jest budowany z adresem
 `/api/v1`, więc przeglądarka nie próbuje połączyć się z nazwą kontenera.
 Lokalne `.env`, bazy, `target` i `node_modules` są wykluczone z kontekstu
-budowania. Wprowadzenie kluczy dostawców w dalszym etapie dotyczy wyłącznie
-backendu, zgodnie z kontraktem projektu.
+budowania. `VITE_MAPTILER_API_KEY` jest publicznym kluczem przeglądarkowym,
+obecnym w zbudowanych plikach aplikacji. Ogranicz go w MapTiler przez
+Allowed HTTP origins: `localhost` dla lokalnego uruchomienia, osobny klucz
+z rzeczywistą domeną dla produkcji. Service tokeny MapTiler i klucz OpenAI
+pozostają poufne i nigdy nie trafiają do zmiennych `VITE_*`.
+
+Mapę włączysz przez dodanie `VITE_MAPTILER_API_KEY` do lokalnego
+`.env.docker` i uruchomienie `docker compose --env-file .env.docker up --build -d`.
+Ponieważ klucz jest ustawieniem budowania, sama operacja `restart` nie
+zmieni go we frontendzie. Nie trzeba usuwać wolumenu SQLite.
 
 ## Operacje
 

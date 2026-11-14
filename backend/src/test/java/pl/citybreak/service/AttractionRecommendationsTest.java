@@ -57,6 +57,30 @@ class AttractionRecommendationsTest {
         assertThat(result.aiUsed()).isFalse();
         assertThat(result.suggestions()).extracting(Recommendation::attractionId).containsExactly("park");
     }
+    @Test void admissionsBudgetAndAdvisorPricesCoverTheWholeGroup() {
+        var museum = attraction("museum", "40", "PLN", 35, 10, 12);
+        var park = attraction("park", "0", "PLN", 25, 10, 12);
+        configure(List.of(museum, park));
+        Criteria group = new Criteria(CRITERIA.origin(), CRITERIA.destination(), CRITERIA.departureDate(),
+                CRITERIA.returnDate(), CRITERIA.priority(), CRITERIA.currency(), CRITERIA.fareType(), 2);
+        var catalog = transport.search(CRITERIA);
+        when(transport.canonicalCriteria(group)).thenReturn(group);
+        when(transport.search(group)).thenReturn(catalog);
+        var single = service.suggest(new RecommendationInput(CRITERIA, "trip", Interest.CULTURE, 50));
+        assertThat(single.suggestions()).extracting(Recommendation::attractionId).contains("museum");
+        var tightGroup = service.suggest(new RecommendationInput(group, "trip", Interest.CULTURE, 50));
+        assertThat(tightGroup.suggestions()).extracting(Recommendation::attractionId).containsExactly("park");
+        when(advisor.suggest(eq("Paryż"), anyLong(), eq(Interest.CULTURE), eq(80), anyList()))
+                .thenAnswer(invocation -> {
+                    List<AttractionRecommendations.Option> options = invocation.getArgument(4);
+                    assertThat(options.stream().filter(option -> option.attraction().id().equals("museum"))
+                            .findFirst().orElseThrow().price()).isEqualByComparingTo("80");
+                    return List.of(new Recommendation("museum", "Dla grupy"));
+                });
+        var exactGroup = service.suggest(new RecommendationInput(group, "trip", Interest.CULTURE, 80));
+        assertThat(exactGroup.aiUsed()).isTrue();
+        assertThat(exactGroup.suggestions()).extracting(Recommendation::attractionId).contains("museum");
+    }
 
     private void configure(List<Attraction> attractions) {
         var out = journey("out", 9, 10);

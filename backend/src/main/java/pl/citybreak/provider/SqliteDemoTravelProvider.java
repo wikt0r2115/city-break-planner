@@ -41,7 +41,7 @@ public final class SqliteDemoTravelProvider implements TravelProvider {
         City destination = city(cities, criteria.destination());
         if (origin == null || destination == null) return criteria;
         return new Criteria(origin.place().name(), destination.place().name(), criteria.departureDate(),
-                criteria.returnDate(), criteria.priority(), criteria.currency(), criteria.fareType());
+                criteria.returnDate(), criteria.priority(), criteria.currency(), criteria.fareType(), criteria.travelers());
     }
 
     @Override public Catalog search(Criteria criteria) {

@@ -22,9 +22,11 @@ try {
   page = await context.newPage();
   const browserErrors = [];
   page.on('pageerror', (error) => browserErrors.push(error.message));
-  const criteria = { origin: 'Warszawa', destination: 'Gdańsk', departureDate: futureDate(7), returnDate: futureDate(8), priority: 'LOWEST_TOTAL_COST', currency: 'PLN', fareType: 'STANDARD' };
+  const criteria = { origin: 'Warszawa', destination: 'Gdańsk', departureDate: futureDate(7), returnDate: futureDate(8), priority: 'LOWEST_TOTAL_COST', currency: 'PLN', fareType: 'STANDARD', travelers: 3 };
   const preview = () => page.waitForResponse((response) => response.url().endsWith('/plans/preview') && response.request().method() === 'POST');
   const idle = () => page.waitForFunction(() => !document.querySelector('fieldset.unframed')?.disabled);
+  const stage = (name) => page.getByRole('navigation', { name: 'Etapy planowania' }).getByRole('button', { name, exact: true }).click();
+  const schedule = async () => { await stage('Atrakcje'); await page.getByRole('button', { name: /^Harmonogram/ }).click(); };
   const names = () => page.locator('.schedule > li h4').allTextContents();
   let saved;
   let shareUrl;
@@ -79,12 +81,15 @@ try {
     await page.keyboard.type(criteria.destination);
     await page.getByLabel('Data wyjazdu', { exact: true }).fill(criteria.departureDate);
     await page.getByLabel('Data powrotu', { exact: true }).fill(criteria.returnDate);
+    await page.getByLabel('Liczba osób', { exact: true }).fill(String(criteria.travelers));
     await page.getByRole('button', { name: /Znajdź połączenia/ }).focus();
     await page.keyboard.press('Enter');
-    await page.getByRole('heading', { name: 'Twój plan zwiedzania' }).waitFor();
+    await page.getByRole('heading', { name: 'Wybierz połączenie' }).waitFor();
     await idle();
     assert.equal(await page.locator('.trip-card').count(), 3);
-    assert.equal(await page.locator('.schedule > li').count(), 3);
+    for (const card of await page.locator('.trip-card').all()) assert.ok((await card.boundingBox()).width<=360,'Connection tiles should be narrow.');
+    for (const details of await page.getByText(/^Ceny i etapy:/).all()) await details.click();
+    assert.equal(await page.locator('.schedule > li').count(), 0);
     await page.locator('.test-banner').waitFor();
     assert.ok(await page.getByText(/Ulgowa:/).count());
     assert.equal(await page.locator('.source-notes').count(), 0);
@@ -97,11 +102,23 @@ try {
     assert.equal(await page.getByText('Strona 2 z 2', { exact: true }).count(), 1);
     assert.ok(await next.isDisabled());
     assert.ok(await page.getByText('Łączny koszt niepotwierdzony', { exact: true }).count());
-    await previous.click();
+    while (await previous.isEnabled()) await previous.click();
+    for (const details of await page.getByText(/^Ceny i etapy:/).all()) await details.click();
     assert.equal(await page.getByRole('button', { name: /^Wariant 1,/ }).getAttribute('aria-pressed'), 'true');
     const links = await page.locator('.inline-links a').evaluateAll((elements) => elements.map((element) => ({ href: element.href, rel: element.rel, policy: element.referrerPolicy })));
     assert.ok(links.length);
     assert.ok(links.every((link) => /^https?:/.test(link.href) && link.rel.includes('noreferrer') && link.policy === 'no-referrer'));
+  });
+
+  await check('group prices and participant count through actual API', async () => {
+    const single = await apiRequest(app,'POST','/searches',{...criteria,travelers:1});
+    const group = await apiRequest(app,'POST','/searches',criteria);
+    assert.equal(group.body.criteria.travelers,3);
+    for(const trip of group.body.roundTripOptions){
+      const original=single.body.roundTripOptions.find(t=>t.id===trip.id);
+      assert.equal(trip.costSummary.total,original.costSummary.complete?(Number(original.costSummary.total)*3).toFixed(2):null);
+      assert.deepEqual(trip.outbound.segments[0].prices.map(p=>[p.amount,p.currency,p.fareType,p.status]),original.outbound.segments[0].prices.map(p=>[p.amount,p.currency,p.fareType,p.status]));
+    }
   });
 
   await check('all four server priorities and incomplete costs', async () => {
@@ -115,11 +132,19 @@ try {
   });
 
   await check('earlier return keeps selected points and explains conflicts', async () => {
+    await page.getByRole('button', { name: 'Dalej: Nocleg', exact: true }).click();
+    await page.getByRole('button', { name: 'Pomiń nocleg', exact: true }).click();
+    for(let index=0;index<3;index++){
+      await Promise.all([preview(),page.getByRole('button',{name:/^Dodaj:/}).click()]); await idle();
+      if(index<2)await page.getByRole('button',{name:'Następna atrakcja',exact:true}).click();
+    }
+    await stage('Połączenie');
     const original = await names();
     const early = page.getByRole('button', { name: /^Wariant .*powrót.*14:00/i });
     const next = page.getByRole('button', { name: 'Następna' });
     while (!await early.count() && await next.isEnabled()) await next.click();
     const earlyCard = page.locator('.trip-card').filter({ has: early });
+    for (const details of await earlyCard.getByText(/^Ceny i etapy:/).all()) await details.click();
     for (const link of await earlyCard.getByRole('link').all()) {
       await link.evaluate((element) => element.addEventListener('click', (event) => event.preventDefault(), { once: true }));
       await link.click();
@@ -130,6 +155,9 @@ try {
     }
     await Promise.all([preview(), early.press('Enter')]);
     await idle();
+    await page.getByRole('button', { name: 'Dalej: Nocleg', exact: true }).click();
+    await page.getByRole('button', { name: 'Pomiń nocleg', exact: true }).click();
+    await page.getByRole('button', { name: /^Harmonogram/ }).click();
     await page.locator('.conflicts').first().waitFor();
     assert.deepEqual(await names(), original);
     assert.ok((await page.locator('.conflicts').allTextContents()).some((reason) => reason.includes('odjeździe powrotnym')));
@@ -139,7 +167,11 @@ try {
     await Promise.all([preview(), page.getByRole('button', { name: 'Usuń Park — dane testowe', exact: true }).click()]);
     await page.waitForFunction(() => document.querySelectorAll('.schedule > li').length === 2);
     await idle();
-    await Promise.all([preview(), page.getByRole('button', { name: 'Dodaj: Park — dane testowe', exact: true }).click()]);
+    await page.getByRole('button', { name: 'Propozycje', exact: true }).click();
+    const addPark = page.getByRole('button', { name: 'Dodaj: Park — dane testowe', exact: true });
+    while (!await addPark.count()) await page.getByRole('button', { name: 'Następna atrakcja', exact: true }).click();
+    await Promise.all([preview(), addPark.click()]);
+    await page.getByRole('button', { name: /^Harmonogram/ }).click();
     await page.waitForFunction(() => document.querySelectorAll('.schedule > li').length === 3);
     await idle();
     await Promise.all([preview(), page.getByRole('button', { name: 'Przesuń Park — dane testowe wcześniej', exact: true }).click()]);
@@ -149,6 +181,7 @@ try {
   });
 
   await check('create, update and owner credential separation', async () => {
+    await page.getByRole('button', { name: 'Dalej: Podsumowanie', exact: true }).click();
     await page.getByRole('button', { name: /Zapisz plan/ }).click();
     await page.waitForURL(/\/plans\/[^/]+$/);
     await idle();
@@ -159,11 +192,13 @@ try {
     assert.ok(!(await page.locator('body').innerText()).includes(ownerToken));
     shareUrl = await page.getByLabel('Link tylko do odczytu', { exact: true }).inputValue();
     assert.equal(new URL(shareUrl).origin, app.url);
+    await stage('Połączenie');
     const previous = page.getByRole('button', { name: 'Poprzednia' });
     while (await previous.isEnabled()) await previous.click();
     const budget = page.getByRole('button', { name: /^Wariant 1,/ });
     await Promise.all([preview(), budget.click({ position: { x: 12, y: 12 } })]);
     await idle();
+    await stage('Podsumowanie');
     const update = page.waitForResponse((response) => response.url().endsWith(`/plans/${id}`) && response.request().method() === 'PUT');
     await page.getByRole('button', { name: /Zapisz zmiany/ }).click();
     assert.equal((await update).status(), 200);
@@ -171,6 +206,7 @@ try {
     const response = await apiRequest(app, 'GET', `/plans/${id}`, undefined, ownerToken);
     assert.equal(response.status, 200);
     saved = response.body;
+    assert.equal(saved.criteria.travelers,3);
     assert.deepEqual(saved.items.map((item) => item.name), expectedNames);
   });
 
@@ -189,8 +225,10 @@ try {
 
   await check('independent public session, no edit UI and mobile layout', async () => {
     await page.setViewportSize({ width: 360, height: 900 });
-    await page.getByText('Strona 1 z 3', { exact: true }).waitFor();
-    assert.equal(await page.locator('.trip-card').count(), 2);
+    await stage('Połączenie');
+    await page.getByText('Strona 1 z 6', { exact: true }).waitFor();
+    assert.equal(await page.locator('.trip-card').count(), 1);
+    await stage('Podsumowanie');
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
     const publicContext = await browser.newContext({ viewport: { width: 360, height: 900 } });
     try {
@@ -199,7 +237,9 @@ try {
       publicPage.on('request', (request) => { if (request.url().includes('/shared-plans/')) authorization = request.headers().authorization; });
       await publicPage.goto(shareUrl);
       await publicPage.getByText('Tylko do odczytu', { exact: true }).waitFor();
-      assert.equal(await publicPage.getByRole('button').count(), 0);
+      assert.ok((await publicPage.locator('.cost').innerText()).includes('3 os.'));
+      assert.equal(await publicPage.getByRole('button', { name: /Zapisz|Usuń|Przesuń|Dodaj/ }).count(), 0);
+      assert.equal(await publicPage.getByRole('textbox').count(), 0);
       assert.equal(authorization, undefined);
       assert.ok(!(await publicPage.locator('body').innerText()).includes(ownerToken));
       await publicPage.locator('.test-banner').waitFor();
@@ -211,7 +251,7 @@ try {
   await check('actual backend process restart keeps plan and public link', async () => {
     await app.restartBackend('fixture');
     await page.reload();
-    await page.getByRole('heading', { name: 'Twój plan zwiedzania' }).waitFor();
+    await page.getByRole('heading', { name: 'Twój wyjazd jest gotowy' }).waitFor();
     await idle();
     assert.deepEqual(await names(), expectedNames);
     assert.equal(await page.getByLabel('Link tylko do odczytu', { exact: true }).inputValue(), shareUrl);
@@ -219,6 +259,7 @@ try {
     const publicPlan = await apiRequest(app, 'GET', `/shared-plans/${token}`);
     assert.equal(publicPlan.status, 200);
     assert.equal(publicPlan.body.testData, true);
+    assert.equal(publicPlan.body.criteria.travelers,3);
     assert.ok(!('ownerToken' in publicPlan.body));
     assert.ok(!('shareUrl' in publicPlan.body));
   });
@@ -227,11 +268,14 @@ try {
     // Explicit negative UI scenarios from a test-only HTTP proxy, not operator data.
     for (const status of ['NO_CONNECTION', 'PROVIDER_ERROR']) {
       app.setSearchFault(status);
+      await stage('Kierunek');
       await page.getByLabel('Data powrotu', { exact: true }).fill(futureDate(9));
       await page.getByRole('button', { name: /Znajdź połączenia/ }).click();
       await page.getByRole('alert').filter({ hasText: 'Poprzedni plan, wybrane punkty i uprawnienia zostały zachowane.' }).waitFor();
       await idle();
       assert.deepEqual(await names(), expectedNames);
+      await page.getByRole('button', { name: 'Wróć do poprzedniego planu', exact: true }).click();
+      await stage('Podsumowanie');
       assert.equal(await page.getByLabel('Link tylko do odczytu', { exact: true }).inputValue(), shareUrl);
       assert.equal(await page.getByRole('button', { name: 'Usuń zapisany plan', exact: true }).count(), 1);
     }
@@ -248,6 +292,18 @@ try {
       assert.equal((await apiRequest(app, 'GET', `/shared-plans/${new URL(shareUrl).pathname.split('/').at(-1)}`)).status, 404);
     } finally { await publicPage.close(); }
     assert.deepEqual(browserErrors, []);
+  });
+  await check('new plan resets attractions and remains empty after reload', async () => {
+    await page.getByRole('button',{name:/Nowy plan/}).click();
+    await page.getByRole('heading',{name:'Dokąd tym razem?',exact:true}).waitFor();
+    assert.equal(await page.locator('.schedule > li').count(),0);
+    await page.getByRole('button',{name:'Uzupełnij przykładową trasę'}).click();
+    await page.getByRole('button',{name:/Znajdź połączenia/}).click();
+    await page.getByRole('heading',{name:'Wybierz połączenie',exact:true}).waitFor();
+    assert.equal(await page.locator('.schedule > li').count(),0);
+    await page.reload();
+    await page.getByRole('heading',{name:'Wybierz połączenie',exact:true}).waitFor();
+    assert.equal(await page.locator('.schedule > li').count(),0);
   });
   await context.close();
   failed = false;

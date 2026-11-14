@@ -2,6 +2,7 @@ package pl.citybreak.planning;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import org.springframework.stereotype.Component;
 import pl.citybreak.model.Model.*;
@@ -41,12 +42,18 @@ public class Planner {
     }
 
     public List<PlanItem> schedule(RoundTrip trip, List<ItemInput> inputs, List<Attraction> attractions) {
+        return schedule(trip, inputs, attractions, null);
+    }
+
+    public List<PlanItem> schedule(RoundTrip trip, List<ItemInput> inputs, List<Attraction> attractions, Place lodging) {
         Map<String, Attraction> catalog = new HashMap<>();
         attractions.forEach(attraction -> catalog.put(attraction.id(), attraction));
         List<PlanItem> result = new ArrayList<>();
         OffsetDateTime previousEnd = trip.outbound().arrivalAt();
         Place previousPlace = last(trip.outbound()).destination();
         Place returnPlace = trip.returnJourney().segments().get(0).origin();
+        String destinationZone = previousPlace.timeZone();
+        ZoneId zone = destinationZone == null ? trip.outbound().arrivalAt().getOffset() : ZoneId.of(destinationZone);
         for (ItemInput input : inputs) {
             Attraction attraction = catalog.get(input.attractionId());
             List<Conflict> conflicts = new ArrayList<>();
@@ -54,14 +61,31 @@ public class Planner {
             OffsetDateTime earliest = previousEnd.plusMinutes(transfer == null ? 0 : transfer);
             OffsetDateTime start = input.startsAt() == null
                     ? earliestStart(earliest, input.visitMinutes(), attraction.openingHours()) : input.startsAt();
+            TransferBasis transferBasis = null;
+            String transferFrom = null;
+            // The hotel is a base between days, not a waypoint between every visit.
+            // Include arrival -> hotel for the first visit and the return to the
+            // hotel from the preceding day's final visit for later day starts.
+            boolean viaLodging = lodging != null && (result.isEmpty()
+                    || start.atZoneSameInstant(zone).toLocalDate().isAfter(previousEnd.atZoneSameInstant(zone).toLocalDate()));
+            if (viaLodging) {
+                Integer toHotel = estimatedWalkingMinutes(previousPlace, lodging);
+                Integer fromHotel = estimatedWalkingMinutes(lodging, attraction.location());
+                transfer = toHotel == null || fromHotel == null ? null : toHotel + fromHotel;
+                earliest = previousEnd.plusMinutes(transfer == null ? 0 : transfer);
+                if (input.startsAt() == null) start = earliestStart(earliest, input.visitMinutes(), attraction.openingHours());
+                transferBasis = TransferBasis.ESTIMATED_WALKING;
+                transferFrom = previousPlace.name() + " → " + lodging.name();
+            }
             OffsetDateTime end = start.plusMinutes(input.visitMinutes());
             if (transfer == null) add(conflicts, ConflictCode.MISSING_DATA, "Brak potwierdzonego czasu dotarcia do atrakcji.", input.id());
             if (start.isBefore(earliest) || start.isBefore(trip.outbound().arrivalAt()))
                 add(conflicts, ConflictCode.TRANSFER_TIME, "Nie wystarczy czasu na dotarcie po poprzednim punkcie lub przyjeździe.", input.id());
             OpeningHours opening = attraction.openingHours();
+            OffsetDateTime visitStart = start;
             if (opening == null || opening.status() == OpeningStatus.UNKNOWN)
                 add(conflicts, ConflictCode.MISSING_DATA, "Nie potwierdzono godzin otwarcia atrakcji.", input.id());
-            else if (opening.intervals().stream().noneMatch(interval -> containsVisit(interval, start, end)))
+            else if (opening.intervals().stream().noneMatch(interval -> containsVisit(interval, visitStart, end)))
                 add(conflicts, ConflictCode.OPENING_HOURS, "Wizyta nie mieści się w potwierdzonych godzinach otwarcia.", input.id());
             Integer toReturn = provider.transferMinutes(attraction.location(), returnPlace);
             if (toReturn == null) add(conflicts, ConflictCode.MISSING_DATA, "Brak potwierdzonego czasu dojazdu na powrót.", input.id());
@@ -69,11 +93,30 @@ public class Planner {
                 add(conflicts, ConflictCode.RETURN_DEPARTURE, "Wizyta wraz z dojazdem kończy się po odjeździe powrotnym.", input.id());
             boolean automaticTime = input.startsAt() == null || Boolean.TRUE.equals(input.automaticTime());
             result.add(new PlanItem(input.id(), input.attractionId(), attraction.name(), start, end, transfer,
-                    List.copyOf(conflicts), automaticTime));
+                    List.copyOf(conflicts), automaticTime, attraction.location(), transferBasis, transferFrom));
             if (end.isAfter(previousEnd)) previousEnd = end;
             previousPlace = attraction.location();
         }
         return List.copyOf(result);
+    }
+
+    /** Geometric walking estimate, not a routed journey or a provider-confirmed duration. */
+    static Integer estimatedWalkingMinutes(Place from, Place to) {
+        if (!coordinates(from) || !coordinates(to)) return null;
+        double lat1 = Math.toRadians(from.latitude());
+        double lat2 = Math.toRadians(to.latitude());
+        double latitude = lat2 - lat1;
+        double longitude = Math.toRadians(to.longitude() - from.longitude());
+        double a = Math.pow(Math.sin(latitude / 2), 2)
+                + Math.cos(lat1) * Math.cos(lat2) * Math.pow(Math.sin(longitude / 2), 2);
+        double kilometers = 6371.0088 * 2 * Math.asin(Math.sqrt(Math.min(1, Math.max(0, a))));
+        return (int) Math.ceil(kilometers * 1.3 / 4.5 * 60);
+    }
+
+    private static boolean coordinates(Place place) {
+        return place != null && place.latitude() != null && place.longitude() != null
+                && Double.isFinite(place.latitude()) && Math.abs(place.latitude()) <= 90
+                && Double.isFinite(place.longitude()) && Math.abs(place.longitude()) <= 180;
     }
 
     public CostSummary cost(Criteria criteria, RoundTrip trip, List<String> attractionIds, List<Attraction> attractions) {
@@ -92,7 +135,7 @@ public class Planner {
             BigDecimal amount = attraction == null ? null : comparablePrice(attraction.entryPrices(), criteria);
             if (amount == null) missing.add("attraction:" + id); else total = total.add(amount);
         }
-        return new CostSummary(missing.isEmpty() ? total.setScale(2).toPlainString() : null,
+        return new CostSummary(missing.isEmpty() ? total.multiply(BigDecimal.valueOf(criteria.travelers())).setScale(2).toPlainString() : null,
                 criteria.currency(), criteria.fareType(), missing.isEmpty(), List.copyOf(missing));
     }
 
