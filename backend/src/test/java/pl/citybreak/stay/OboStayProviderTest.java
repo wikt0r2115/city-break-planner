@@ -24,6 +24,43 @@ class OboStayProviderTest {
     private static final Criteria CRITERIA = new Criteria("Paris, France", LocalDate.of(2026, 11, 21), LocalDate.of(2026, 11, 23), 2, "PLN");
     private final ObjectMapper json = new ObjectMapper();
 
+    @Test void locallyRejectedRetriesDoNotExtendEitherLocalOrUpstreamCooldown() throws Exception {
+        for (int firstStatus : new int[]{200, 429}) {
+            AtomicReference<Instant> now = new AtomicReference<>(NOW);
+            Clock clock = new Clock() {
+                @Override public java.time.ZoneId getZone() { return ZoneOffset.UTC; }
+                @Override public Clock withZone(java.time.ZoneId zone) { return this; }
+                @Override public Instant instant() { return now.get(); }
+            };
+            AtomicInteger requests = new AtomicInteger();
+            AtomicInteger status = new AtomicInteger(firstStatus);
+            byte[] body = envelope(payload()).toString().getBytes(StandardCharsets.UTF_8);
+            HttpServer server = server();
+            server.createContext("/mcp", exchange -> {
+                requests.incrementAndGet();
+                exchange.getResponseHeaders().set("Retry-After", "120");
+                exchange.sendResponseHeaders(status.get(), body.length);
+                exchange.getResponseBody().write(body);
+                exchange.close();
+            });
+            server.start();
+            try {
+                var provider = new OboStayProvider(json, clock, true, "fixture-key", 3,
+                        URI.create("http://127.0.0.1:" + server.getAddress().getPort() + "/mcp"));
+                assertThat(provider.search(CRITERIA).status()).isEqualTo(firstStatus == 200 ? Status.OK : Status.RATE_LIMITED);
+                for (int attempt = 1; attempt <= 20; attempt++) {
+                    now.set(NOW.plusMillis(attempt * 100L));
+                    assertThat(provider.search(CRITERIA).status()).isEqualTo(Status.RATE_LIMITED);
+                }
+                assertThat(requests.get()).isEqualTo(1);
+                now.set(NOW.plusSeconds(firstStatus == 200 ? 6 : 120));
+                status.set(200);
+                assertThat(provider.search(CRITERIA).status()).isEqualTo(Status.OK);
+                assertThat(requests.get()).isEqualTo(2);
+            } finally { server.stop(0); }
+        }
+    }
+
     @Test void readsStructuredAndTextEnvelopesAndPreservesQuoteInclusionsAndBookingUrl() throws Exception {
         ObjectNode payload = payload();
         var price = (ObjectNode) payload.at("/results/0/price");

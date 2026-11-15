@@ -61,7 +61,8 @@ public final class OboStayProvider {
         if (!enabled) return response(Status.UNAVAILABLE, criteria, List.of(), "Wyszukiwanie noclegów jest obecnie wyłączone.", null);
         if (!key.isEmpty() && !key.matches("[!-~]{1,8192}")) return error(criteria);
         int cooldown = reserve();
-        if (cooldown > 0) return rateLimited(criteria, cooldown);
+        if (cooldown > 0) return response(Status.RATE_LIMITED, criteria, List.of(),
+                "Trwa inne wyszukiwanie lub osiągnięto limit. Spróbuj ponownie za chwilę.", cooldown);
         try { return request(criteria); }
         finally { active.release(); }
     }
