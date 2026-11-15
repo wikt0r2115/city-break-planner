@@ -21,13 +21,13 @@ a odbiór zintegrowanej wersji — [raport SOL-120](acceptance.md).
 
 ## Materiał demonstracyjny
 
-[Otwórz animację GIF](media/demo.gif) · [metadane i SHA256](media/demo.json)
+Historyczne nagranie i jego metadane zostały usunięte z bieżącej wersji
+repozytorium. Nowy materiał nie jest obecnie dołączony. Poniższy opis
+dokumentuje wcześniejszą weryfikację oraz sposób samodzielnego nagrania.
 
-![Testowy przebieg: wyszukiwanie, wcześniejszy powrót, konflikt, zapis i odczyt](media/demo.gif)
-
-Animacja przedstawia **rzeczywiste działanie interfejsu z uruchomionym API**,
-ale używa wyłącznie kontrolowanego dostawcy `APP_DATA_MODE=demo`.
-Połączenia Warszawa → Gdańsk, ceny i atrakcje w tym filmie są fikcyjne.
+Historyczna animacja przedstawiała **rzeczywiste działanie interfejsu z uruchomionym API**,
+ale używała wyłącznie kontrolowanego dostawcy `APP_DATA_MODE=demo`.
+Połączenia Warszawa → Gdańsk, ceny i atrakcje w tym filmie były fikcyjne.
 Nie stanowią dowodu działania rzeczywistych źródeł ani oferty sprzedaży.
 Oznaczenie danych testowych jest stale widoczne, również po przewinięciu.
 Daty nagrania wybiera skrypt względem dnia uruchomienia.

@@ -1,146 +1,298 @@
 # City Break Planner
 
-Demo planera krótkich wyjazdów między Londynem, Paryżem i Amsterdamem. Rozkłady, dojazdy, ceny i atrakcje są zapisane w SQLite. Godziny i ceny są demonstracyjne.
+Planer krótkich wyjazdów, który łączy wybór transportu ze zwiedzaniem. Po zmianie godziny powrotu ma wskazywać, które atrakcje przestają mieścić się w planie.
 
-| Relacja | Przykładowe warianty w obie strony |
-| --- | --- |
-| Londyn – Paryż | Pociąg lub autokar, z metrem i autobusem miejskim |
-| Paryż – Amsterdam | Pociąg lub samolot, z dojazdami na lotniska i tramwajem |
-| Londyn – Amsterdam | Pociąg lub nocny prom przez Harwich i Hoek van Holland, z dojazdami koleją i metrem |
+## Aktualny zakres
 
-## Uruchomienie
+Backend Java / Spring Boot / SQLite udostępnia wyszukiwanie, porównywanie
+czterech priorytetów, przeliczanie harmonogramu i zapis planu. Frontend
+React / TypeScript / Vite pozwala wybrać podróż, edytować atrakcje, zobaczyć
+konflikty po zmianie powrotu oraz udostępnić zapisany plan do odczytu.
 
-W katalogu projektu użyj `docker compose up --build -d` i otwórz [localhost:8080](http://localhost:8080/). SQLite znajduje się w trwałym wolumenie. Szczegóły opisuje [instrukcja Docker Compose](docs/docker.md).
+Domyślny tryb `live` odczytuje rzeczywisty rozkład linii 100 w Gdańsku
+oraz dostępne oficjalne cenniki atrakcji. **Taryfa publikowana nie jest ofertą
+wycenioną dla konkretnej rezerwacji.** Każda cena pokazuje źródło i czas
+odczytu; niedostępne dane nie są zastępowane wymyślonymi wartościami.
+Pełny scenariusz reguł planera można też sprawdzić w jawnym trybie danych
+testowych opisanym niżej.
 
-Bez Dockera uruchom backend z katalogu `backend` w pierwszym terminalu (JDK 21):
+Wspólny [kontrakt REST](docs/api-contract.md) opisuje wyszukiwanie, cztery
+priorytety, ceny i źródła, harmonogram, CRUD oraz odrębny publiczny odczyt.
+Weryfikację dostępu do źródeł, pokrycie dat i ograniczenia opisuje
+[raport SOL-115](docs/data-sources.md). Nie potwierdzamy dostępności konkretnego
+kursu lub biletu na podstawie samego opublikowanego cennika.
 
-```powershell
-.\mvnw.cmd -B -ntp package
-java -jar target/city-break-planner-0.0.1-SNAPSHOT.jar
+## Zatwierdzony etap i dalsze doprecyzowanie
+
+Właściciel zatwierdził pierwszy etap SOL-119: **Dworzec Główny ↔ Targ Rybny
+w Gdańsku, linia 100**, wyłącznie w datach opublikowanych przez ZTM,
+oraz dostępne oficjalne cenniki atrakcji. To lokalny odcinek w mieście,
+nie połączenie Warszawa–Gdańsk. Przystanki po obu stronach Dworca mogą mieć
+różne identyfikatory; adapter sprawdza rzeczywistą kolejność i godziny kursu.
+
+**Zakres kolei, samolotów, autokarów, promów, pozostałych tras oraz dostawców
+cen wymaga doprecyzowania w dalszym etapie projektu.** Ten etap nie oznacza
+pełnego pokrycia wszystkich środków transportu. Nie zakładano kont,
+nie kupowano dostępu i nie deklarujemy działania niezweryfikowanych API.
+
+Rozkład i taryfa są odrębnymi źródłami. Błąd jednego cennika zachowuje dane
+pozostałych źródeł. Brak pokrycia daty lub trasy nie oznacza braku kursów.
+Jeśli nie potwierdzono godzin otwarcia, warunków ulgi lub czasu dojścia,
+aplikacja pokazuje ten brak zamiast przyjmować dostępność lub zerowy dojazd.
+
+## Najprostszy start — Docker
+
+W głównym katalogu projektu wykonaj:
+
+```bash
+docker compose up --build -d
 ```
 
-Na Linuxie lub macOS użyj `./mvnw` zamiast `.\mvnw.cmd`. W drugim terminalu, z katalogu `frontend` (Node 22.22.2+):
+Otwórz **http://localhost:8080**. Compose zbuduje i uruchomi frontend,
+backend oraz utworzy bazę SQLite w trwałym wolumenie. W tym wariancie
+potrzebujesz tylko Dockera z Compose i obsługą kontenerów linuksowych;
+Java, Maven i Node są dostarczane przez obrazy. Pierwsze budowanie pobiera
+obrazy i zależności z internetu.
 
-```sh
+Frontend przekazuje `/api` do backendu przez Nginx. Linki do zapisanych
+planów używają tego samego adresu. SQLite działa wewnątrz backendu,
+a plik bazy znajduje się w wolumenie.
+
+```bash
+docker compose ps
+docker compose logs -f --tail=100
+docker compose down
+```
+
+`down` zatrzymuje kontenery i **zachowuje zapisane plany**. Ponowny start
+korzysta z tego samego wolumenu `planner_data` i pliku
+`/data/city-break-planner.db`. Domyślne uruchomienie tworzy nową bazę
+kontenerów; dane są usuwane dopiero przy usunięciu wolumenu.
+
+Domyślnie działa tryb `live` z zatwierdzonym zakresem opisanym poniżej.
+Aby zmienić port lub włączyć jawne dane testowe, przygotuj opcjonalny plik:
+
+```bash
+cp .env.docker.example .env.docker
+docker compose --env-file .env.docker up --build -d
+```
+
+Przed uruchomieniem edytuj `.env.docker`: np. `APP_PORT=18080` zmienia adres
+na `http://localhost:18080`, a `APP_DATA_MODE=demo` włącza oznaczone fikcyjne
+przykłady. Port jest automatycznie uwzględniany w linkach i konfiguracji API.
+`APP_FRONTEND_BASE_URL` pozwala podać inny publiczny adres. Przy dalszych
+poleceniach używaj tego samego `--env-file .env.docker`.
+
+Techniczne sprawdzenie kontenerów: [SOL-122](docs/docker.md).
+
+## Wymagania przy uruchomieniu bez Dockera
+
+- JDK 17–25; lokalna weryfikacja na Java 25.
+- Node.js 22.22.2+ z linii 22 LTS oraz npm 10; `.nvmrc` wskazuje linię 22.
+- Dostęp do internetu przy pierwszym pobieraniu zależności i Maven Wrapper.
+
+Maven jest dostarczany przez wrapper w `backend/`; instalacja systemowa
+Mavena ani serwera SQLite nie jest potrzebna. Przy zainstalowanym `nvm`
+uruchom w katalogu repozytorium `nvm install && nvm use`.
+
+## Uruchomienie lokalne
+
+Otwórz dwa terminale w katalogu repozytorium. W pierwszym:
+
+```bash
+cd backend
+./mvnw spring-boot:run
+```
+
+Backend: `http://127.0.0.1:8080`. SQLite automatycznie tworzy lokalny plik
+`backend/city-break-planner.db`, ignorowany przez Git. Plik zachowuje się
+między uruchomieniami; zapis planów tworzy wymagany schemat przy pierwszej
+operacji na repozytorium planów.
+
+W drugim terminalu:
+
+```bash
+cd frontend
 npm ci
 npm run dev
 ```
 
-Otwórz [localhost:5173](http://localhost:5173/). Przy pierwszym odczycie backend wczyta [dane demonstracyjne](backend/src/main/resources/demo-data.sql) do tabel `demo_*` w tej samej bazie. Zapisane plany są w tabeli `plans`. Dni demo korzystają z powtarzalnego rozkładu, więc przykład działa także po zmianie daty prezentacji.
+Otwórz **http://localhost:5173**. Wyszukiwanie wymaga działającego backendu.
+Vite ma stały port: gdy 5173 jest zajęty, zwolnij port zamiast zmieniać origin
+bez dostosowania CORS. `localhost` i `127.0.0.1` to różne originy.
 
-## Scenariusz pokazu
-
-Planer pokazuje kolejno: **Kierunek → Połączenie → Nocleg → Atrakcje → Podsumowanie**.
-Baner znajduje się w nagłówku, a nawigacja między krokami pozostaje widoczna.
-Na desktopie mapa jest obok treści, na telefonie wybierasz „Plan” lub „Mapa”.
-Dokument mieści się w wysokości ekranu; długie szczegóły i harmonogram przewijasz wewnątrz bieżącego kroku.
-Powrót do wcześniejszego kroku i odświeżenie karty zachowują roboczy plan oraz świeże wyniki noclegów.
-
-Liczbę osób (1–8 dorosłych) wybierasz w „Kierunku”. Koszt transportu i wstępów
-oraz budżet propozycji atrakcji dotyczą całej grupy; szczegóły biletów podają
-ceny za jedną osobę. Noclegi korzystają z tej samej liczby uczestników,
-a OBO wycenia pobyt osobno dla grupy i liczby pokoi wybranej w „Noclegu”.
-Na desktopie wyświetlane są trzy kafelki transportu, na tablecie dwa, na
-telefonie jeden. „Nowy plan” lub kliknięcie logo rozpoczyna pusty plan;
-zwykłe odświeżenie przywraca bieżącą pracę. Nowy plan nie wybiera atrakcji
-automatycznie. Edycja powrotu w istniejącym planie zachowuje wybrane miejsca.
-
-1. W kroku „Kierunek” kliknij „Uzupełnij przykładową trasę” i wyszukaj Londyn → Paryż. Zmień priorytet z „Niższy koszt” na „Krótszy dojazd” i wyszukaj ponownie. Autokar ustąpi pierwszego miejsca pociągowi.
-2. Wybierz połączenie, a potem sprawdź i wybierz nocleg albo kliknij „Pomiń nocleg”. Oferty noclegów są stronicowane po jednym hotelu. Formularz po wyszukaniu rozwiniesz przez „Parametry noclegu”.
-3. W kroku „Atrakcje” rozwiń „Dobierz atrakcje”, wybierz zainteresowania i budżet, a następnie „Zaproponuj atrakcje”. Przy budżecie 0 zł możesz dodać Jardin des Tuileries. Zakładka „Harmonogram” pozwala zmienić godziny i kolejność wizyt.
-4. Wróć do połączeń i wybierz wcześniejszy powrót o 08:15. Aby pokazać konflikt, ustaw wcześniej wizytę ręcznie na dzień powrotu po 08:15. W „Podsumowaniu” zapisz plan i otwórz link do odczytu w osobnym oknie.
-5. Wyszukaj Londyn → Amsterdam z powrotem co najmniej dwa dni po wyjeździe, żeby pokazać nocny prom. Czas podróży obejmuje przesiadki, a godziny przy odcinkach są lokalne.
-
-[Weryfikacja układu krokowego](docs/wizard-verification.md).
-
-## Mapa planu — MapTiler
-
-Mapa pokazuje przystanki podróży i ponumerowane atrakcje z harmonogramu,
-również po otwarciu udostępnionego planu. Punkty z konfliktami mają osobne
-oznaczenie i opis powodu. Linie pomiędzy atrakcjami pokazują kolejność
-zwiedzania; nie wyznaczają rzeczywistej drogi ani czasu dojścia.
-
-Do włączenia podkładu mapy potrzebny jest publiczny klucz z
-[MapTiler Cloud → API keys](https://cloud.maptiler.com/account/keys/).
-W lokalnym pliku `.env.docker` ustaw `VITE_MAPTILER_API_KEY=twoj_klucz`,
-a następnie przebuduj frontend:
+Sprawdzenie API:
 
 ```bash
-docker compose --env-file .env.docker up --build -d
+curl --fail http://127.0.0.1:8080/api/v1/health
 ```
 
-W ustawieniach klucza ogranicz Allowed HTTP origins do `localhost`
-(ewentualnie `127.0.0.1`, jeśli używasz tego adresu). Dla opublikowanej
-strony użyj oddzielnego klucza ograniczonego do jej domeny.
-Klucz do mapy jest publiczny i trafia do plików przeglądarki; nie używaj
-service tokena ani klucza OpenAI. Nie zapisuj prawdziwych kluczy w repo.
-Przy Vite bez Dockera ustaw tę samą zmienną w `frontend/.env.local`.
-Zmiana klucza w Dockerze wymaga ponownego budowania frontendu.
+Oczekiwane HTTP 200 i `{"status":"UP","database":"UP"}`. Awaria bazy daje
+HTTP 503 i `{"status":"DOWN","database":"DOWN"}`. Wyłączony backend
+powoduje czytelny błąd na stronie i pozwala ponowić sprawdzenie.
 
-Integracja korzysta ze współrzędnych własnego katalogu SQLite, bez
-geokodowania. Zachowuje logo i informacje o źródłach MapTiler. Bez klucza
-lub przy niedostępnej mapie harmonogram, zapis i udostępnianie nadal działają.
-Starsze zapisane plany bez współrzędnych atrakcji mogą pokazywać tylko
-przystanki; ponowne przeliczenie i zapis uzupełniają dostępne współrzędne.
-Limity i wykorzystanie planu Free sprawdzisz w panelu MapTiler Analytics.
-[Wyniki i granice weryfikacji mapy](docs/map-verification.md).
+## Wyszukiwanie danych rzeczywistych
 
-## OpenAI
+Możesz sprawdzić dane rzeczywiste bez dodatkowych
+kluczy: uruchom domyślny backend i frontend, wpisz **Dworzec Główny** oraz
+**Targ Rybny**, a następnie wybierz daty z opublikowanego zakresu ZTM.
+Zakres może się zmieniać; odpowiedź API podaje brak pokrycia dla zbyt
+odległej daty. Lista pokazuje do 24 wariantów po porównaniu wszystkich
+znalezionych par według wybranego priorytetu. Nie jest pełnym spisem kursów.
 
-`OPENAI_API_KEY` jest opcjonalną zmienną tylko dla backendu. Zapisany klucz użytkownika Windows nadal działa. Po zbudowaniu backendu można użyć `scripts\start-openai-local.cmd`. W Compose klucz można przekazać ze środowiska lub lokalnego `.env.docker` utworzonego z `.env.docker.example`.
+## Pełny przebieg na danych testowych
 
-Kliknięcie „Zaproponuj atrakcje” może wysłać do GPT-6 Luna miasto, czas na miejscu, budżet, zainteresowania i pasujące pozycje katalogu. Wybór przechodzi kontrolę harmonogramu oraz łącznego budżetu. Bez klucza, przy awarii lub po osiągnięciu limitu pojawiają się propozycje z katalogu. Domyślnie limit to 4 próby dziennie na proces backendu (`APP_AI_DAILY_REQUESTS`). Formularz transportu, zapis i otwarcie planu korzystają z danych lokalnych.
+W terminalu backendu, zamiast domyślnego polecenia uruchomienia:
 
-## Testowa sekcja noclegów — OBO Travel
+```bash
+cd backend
+APP_DATA_MODE=demo ./mvnw spring-boot:run
+```
 
-Po wyszukaniu podróży sekcja „Nocleg na Twój wyjazd” podpowiada miasto
-i daty z planu. Możesz je zmienić niezależnie i nacisnąć „Sprawdź noclegi”.
-Liczba dorosłych pochodzi z kroku „Kierunek”; liczbę pokoi (1–8, maksymalnie
-tyle, ile dorosłych) wybierasz w „Noclegu”. Wyszukiwanie uruchamia się
-wyłącznie na żądanie. Przy jednodniowym wyjeździe ustaw późniejszą datę
-wymeldowania; OBO wymaga co najmniej jednej nocy i zameldowania od jutra.
+Frontend uruchom bez zmian. Tryb `demo` zwraca **wyłącznie fikcyjne, kontrolowane
+przykłady**. Są oznaczone `testData: true` przez API i komunikatem w interfejsie.
+Pokazane ceny i godziny nie stanowią rzeczywistych ofert, także po zapisie
+i udostępnieniu planu. Nie używaj ich do zakupu lub planowania faktycznej podróży.
 
-To rzeczywiste oferty [OBO Travel](https://onebookingonline.com/mcp),
-wyceniane osobno od demonstracyjnego transportu i atrakcji. Sekcja pokazuje
-do trzech hoteli, cenę całego pobytu, walutę, czas sprawdzenia oraz dostępne
-informacje o podatkach i dodatkowych opłatach. Sprawdzenie oferty i rezerwacja
-odbywają się na stronie OBO; aplikacja nie pobiera płatności.
+1. Podaj start, cel i przyszłe daty, wybierz jeden priorytet i wyszukaj.
+2. Porównaj warianty, rozwiń etapy podróży i wybierz połączenie.
+3. Dodawaj i usuwaj atrakcje oraz zmieniaj ich kolejność. Harmonogram oblicza API.
+4. Wybierz wcześniejszy powrót. Punkty pozostają w planie, a przy kolizjach
+   pojawiają się powody, uwzględniające dojazd i godziny otwarcia.
+5. Zapisz plan i skopiuj link do odczytu. Otwórz go w osobnej sesji przeglądarki:
+   odbiorca widzi plan bez kontrolek edycji.
 
-Domyślnie działa bez konta i klucza, bez użycia AI. Opcjonalny `OBO_API_KEY`
-zwiększa limit przypisany do backendu i musi pozostać poza przeglądarką.
-`APP_OBO_ENABLED=false` wyłącza integrację, a `APP_OBO_TIMEOUT_SECONDS`
-ustawia limit odczytu (domyślnie 25 s, maksymalnie 30 s). Przy limitach,
-błędach lub niepełnych odpowiedziach pojawia się odpowiedni komunikat.
+Token edycji jest zapamiętywany lokalnie przez przeglądarkę dla danego planu.
+Link do odczytu go nie zawiera. Wyczyszczenie danych przeglądarki oznacza
+utratę lokalnego prawa edycji; nie ma jeszcze kont ani odzyskiwania tokenu.
+Publiczny link pozostaje aktywny do usunięcia planu. Zapisane plany można
+odczytać po ponownym uruchomieniu backendu z tym samym plikiem SQLite.
 
-Karty pokazują zdjęcia z adresów OBO oraz przycisk „Pokaż na mapie”.
-Hotele ze znanymi współrzędnymi mają na mapie fioletowe znaczniki `H`.
-Zdjęcia i współrzędne pochodzą z tego samego wyszukiwania co ceny;
-nie wykonujemy dodatkowego zapytania o szczegóły każdego hotelu.
+## Konfiguracja
 
-Świeże wyniki oraz formularz są zachowywane w `sessionStorage` bieżącej karty.
-Odświeżenie strony przywraca także roboczy plan i hotele bez kolejnego
-wyszukiwania OBO. Ponowne kliknięcie dla tych samych parametrów korzysta
-z aktualnych wyników. Cache mieści do trzech wyszukiwań i wygasa najpóźniej
-30 minut od wyceny; odczyt nie przedłuża tego czasu. Po wygaśnięciu trzeba
-ręcznie sprawdzić ceny ponownie. Zamknięcie karty kończy jej sesję.
-Oferty, ceny, zdjęcia i tokeny OBO nie są zapisywane w SQLite. Po świadomym
-wyborze hotelu plan może zachować jego nazwę i współrzędne jako bazę
-zwiedzania, także w publicznym widoku. Mapa pokazuje wtedy wyłącznie ten
-nocleg. Pierwsze dojście i dojście po zmianie dnia uwzględniają hotel;
-czasy są oznaczone jako szacunek pieszy ze współrzędnych, bez wyznaczania
-trasy po ulicach. Po wygaśnięciu ceny baza pozostaje punktem planu.
-Puste i nieczytelne wyniki wyświetlają informację o niedostępności partnerów
-i samodzielnym szukaniu noclegu. Poprawne oferty częściowej odpowiedzi
-są pokazywane bez komunikatu technicznego. Zdjęcia są
-wyświetlane bezpośrednio ze źródła, bez kopiowania plików do aplikacji.
-[Warunki korzystania z danych OBO](https://onebookingonline.com/api-terms).
-[Weryfikacja integracji noclegów](docs/obo-verification.md).
+Domyślne ustawienia wystarczają do startu. Szablony:
+[backend/.env.example](backend/.env.example),
+[frontend/.env.example](frontend/.env.example).
 
-## Testy i CI
+| Zmienna | Domyślna wartość | Odbiorca |
+| --- | --- | --- |
+| `SERVER_ADDRESS` | `127.0.0.1` | backend |
+| `SERVER_PORT` | `8080` | backend |
+| `SPRING_DATASOURCE_URL` | `jdbc:sqlite:./city-break-planner.db` | backend |
+| `APP_CORS_ALLOWED_ORIGINS` | `http://localhost:5173` | backend; lista po przecinku |
+| `APP_FRONTEND_BASE_URL` | `http://localhost:5173` | backend; baza linków do odczytu |
+| `APP_DATA_MODE` | `live` | backend; `demo` włącza jawne przykłady testowe |
+| `APP_SOURCE_TIMEOUT_SECONDS` | `3` | backend; limit odczytu źródła, zakres 1–5 s |
+| `VITE_API_BASE_URL` | `http://localhost:8080/api/v1` | frontend; adres publiczny |
 
-- Backend w `backend`: `./mvnw -B -ntp package`.
-- Frontend w `frontend`: `npm ci`, `npm test`, `npm run build`.
-- Przeglądarka w `e2e`: `npm ci`, `npx playwright install chromium`, `npm test` i `npm run test:showcase`. Ustaw `E2E_SKIP_BUILD=1`, jeśli backend i frontend są już zbudowane.
+Spring Boot nie wczytuje automatycznie `.env`. Dla własnej konfiguracji
+w terminalu backendu wykonaj (Bash, plik lokalny pod własną kontrolą):
 
-GitHub Actions uruchamia te sprawdzenia po pushu i przy pull requestach.
-Osobne zadanie buduje oba obrazy Docker Compose na świeżym runnerze i testuje demo z pustą bazą SQLite, zapisem i ponownym uruchomieniem kontenerów. Oba zadania działają bez klucza OpenAI. Aktualny format żądań opisuje [kontrakt REST](docs/api-contract.md).
+```bash
+cd backend
+cp .env.example .env
+# Dostosuj .env przed uruchomieniem.
+set -a
+source .env
+set +a
+./mvnw spring-boot:run
+```
+
+W frontendzie `cp .env.example .env.local`; Vite wczyta ten plik po ponownym
+uruchomieniu. Nigdy nie dodawaj sekretów do `VITE_*` — trafiają do przeglądarki.
+Zatwierdzone źródła lokalne nie wymagają kluczy API. Dane pobiera serwer,
+z ograniczeniem czasu i rozmiaru odpowiedzi. Nazwy zmiennych i zasady
+dostępu przyszłych dostawców ustalimy po doprecyzowaniu kolejnego etapu;
+żadnych kluczy dostawców nie przekazujemy do przeglądarki.
+
+## Testy i budowanie
+
+Z katalogu `backend/`:
+
+```bash
+./mvnw test
+./mvnw package
+java -jar target/city-break-planner-0.0.1-SNAPSHOT.jar
+```
+
+Z katalogu `frontend/`:
+
+```bash
+npm ci
+npm test
+npm run build
+```
+
+Testy backendu sprawdzają SQLite, health i CORS, pełny CRUD i uprawnienia,
+priorytety oraz konflikty harmonogramu. Testy frontendu używają kontrolowanych
+odpowiedzi API do sprawdzenia wyszukiwania, edytora i widoku publicznego.
+Build sprawdza TypeScript i tworzy `dist/`.
+Backend i Vite muszą działać jednocześnie, aby ręcznie sprawdzić pełne połączenie.
+W Windows użyj `mvnw.cmd` zamiast `./mvnw`; eksport zmiennych dostosuj do powłoki.
+
+Wyniki i granice aktualnego odbioru opisuje [raport SOL-120](docs/acceptance.md).
+[Raport SOL-115–118](docs/verification.md) zachowuje historię sprawdzenia
+wcześniejszego etapu. Dane testowe i wyniki rzeczywistych odczytów są
+raportowane oddzielnie.
+
+### Testy całego przepływu
+
+Osobny pakiet E2E wymaga Chrome albo przeglądarki zainstalowanej przez
+Playwright. Pracuje na własnych portach i tymczasowym SQLite:
+
+```bash
+cd e2e
+npm ci
+# Jeśli nie masz lokalnego Chrome: npx playwright install chromium
+npm test
+```
+
+Deterministyczny zestaw używa jawnych danych testowych. Osobne sprawdzenie
+rzeczywistych źródeł wymaga daty w aktualnym zakresie rozkładu:
+
+```bash
+E2E_LIVE_DATE=2026-11-14 npm run test:live
+```
+
+Data jest przykładem weryfikacji, a nie trwałą gwarancją pokrycia.
+Szczegóły, wyniki i zakres testów są w [raporcie SOL-120](docs/acceptance.md).
+
+## Architektura
+
+Frontend komunikuje się bezpośrednio z REST Spring Boot. Warstwa `api`
+obsługuje HTTP, `service` walidację i uprawnienia, `planning` ranking
+i harmonogram, `provider` ograniczone czasem i rozmiarem odczyty źródeł,
+a `persistence` atomowe migawki planów w SQLite. Cenniki HTML odczytuje
+Jsoup. Token właściciela przechowujemy w bazie jako hash; publiczny link
+używa niezależnego tokenu i osobnego endpointu tylko do odczytu.
+
+## Nagranie i przygotowanie oddania
+
+[Otwórz demonstrację GIF](docs/media/demo.gif) — rzeczywisty interfejs i API,
+**wyłącznie fikcyjne dane testowe**, stale oznaczone na nagraniu.
+
+![Testowy przepływ wyszukania, konfliktu, zapisu i odczytu planu](docs/media/demo.gif)
+
+[Instrukcja wydania](docs/release.md) opisuje ponowne nagranie, weryfikację
+artefaktu i listę kontroli właściciela. Końcowe sprawdzenie repozytorium
+i wysłanie linku z imieniem i nazwiskiem do Xelerit pozostaje działaniem
+właściciela, przed **15 listopada 2026, 23:59 Europe/Warsaw**.
+
+## Organizacja dalszej pracy
+
+`backend/` odpowiada za REST, walidację, planowanie, SQLite i dostawców;
+`frontend/` za widoki i komunikację z API; `docs/api-contract.md` jest wspólną
+umową. Koordynator uzgadnia jej zmiany przed równoległą implementacją.
+
+SOL-115 weryfikuje źródła na konkretnych trasach i datach. SOL-116 obejmuje
+zapis i uprawnienia, SOL-117 planowanie, SOL-118 widoki, SOL-119 integracje.
+Dalsze niezależne prace zaczynaj z tej samej aktualnej gałęzi bazowej,
+w osobnych worktrees. Nie uznawaj braku ceny albo awarii dostawcy za
+potwierdzony brak połączenia. Zakres obsługiwanych tras zatwierdza właściciel.
+
+Przy implementacji wykorzystano Codexa do koordynacji zadań z Linear,
+pracy agentów nad backendem, frontendem i weryfikacją źródeł, a także testów
+i niezależnej recenzji. Instrukcje projektowe oraz kontrakt są wersjonowane
+w repozytorium; decyzje o zasięgu produktu i źródłach należą do właściciela.
+
+Instrukcje dla agentów są w [AGENTS.md](AGENTS.md), [backend/AGENTS.md](backend/AGENTS.md) i [frontend/AGENTS.md](frontend/AGENTS.md).
