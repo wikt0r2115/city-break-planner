@@ -58,7 +58,7 @@ function TripCard({ trip, rank, selected, busy, onSelect, compact = false, trave
       aria-pressed={selected}
       aria-disabled={busy}
       onClick={() => { if (!busy && !selected) onSelect(trip); }}
-    />
+    ><span className="trip-selection-hint" aria-hidden="true">{selected ? '✓ Wybrane połączenie' : 'Wybierz połączenie →'}</span></button>
     <div className="trip-card-top">
       <div className="cost">
         <strong>{complete && total !== null ? money(total, currency) : 'Łączny koszt niepotwierdzony'}</strong>

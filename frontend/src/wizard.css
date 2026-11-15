@@ -312,3 +312,38 @@
   .page--planner .wizard-notices { max-height: 55px; }
   .page--planner > footer { display: none; }
 }
+
+/* Interactive controls stay recognisable before hover, including on touch screens. */
+.page .primary-button { background: #22513f; box-shadow: 0 2px 0 #15392c, 0 4px 10px #294a3f18; }
+.page .secondary-button { border-color: #78915f; background: #eaf0df; box-shadow: 0 1px 0 #c2cfb2; }
+.page .text-button { border: 1px solid #bdcba9; border-radius: 7px; background: #edf2e4; color: #294a3f; font-weight: 650; padding-inline: 9px; }
+.page .text-button.danger { color: #963f29; border-color: #d9b5a4; background: #fbefe8; }
+.page .new-plan-button { color: #7b432b; border-color: #ca9978; background: #fbede2; }
+.page--planner .wizard-steps button:not(:disabled):not([aria-current="step"]) { border-color: #98ac81; background: #fffefa; color: #294a3f; }
+.page--planner :is(.wizard-attractions-tabs, .wizard-view-toggle) button { border: 1px solid #adbd9b; background: #fffefa; }
+.page--planner :is(.wizard-attractions-tabs, .wizard-view-toggle) button[aria-pressed="true"] { background: #294a3f; border-color: #294a3f; color: #fffefa; }
+.page .trip-map-views button { border: 1px solid #a5b78e; }
+.page details > summary { border: 1px solid #c4d0b5; border-radius: 7px; padding: 7px 10px; background: #f0f4e8; color: #294a3f; font-weight: 650; }
+.page details[open] > summary { background: #e2ebd6; border-color: #96ac7c; margin-bottom: 8px; }
+.page--planner :is(.trip-leg-details, .stay-price-details, .trip-map-points) > summary { padding-inline: 9px; }
+.page .trip-card { border-color: #a5b78e; padding-bottom: 58px; box-shadow: 0 3px 9px #294a3f0a; }
+.page .trip-card.chosen { border-color: #456d37; background: #f0f6e7; box-shadow: inset 0 0 0 1px #456d37; }
+.trip-selection-hint { position: absolute; bottom: 12px; left: 14px; right: 14px; display: flex; align-items: center; justify-content: center; min-height: 32px; border: 1px solid #8fa573; border-radius: 7px; color: #294a3f; background: #e9f0de; font-size: 12px; font-weight: 700; }
+.trip-card.chosen .trip-selection-hint { background: #294a3f; color: #fffefa; border-color: #294a3f; }
+.trip-card-select[aria-disabled="true"] .trip-selection-hint { opacity: .55; }
+.page .priority-option { background: #fffefa; border-color: #aebf99; }
+.page .priority-option.selected { background: #e1ecd3; border-color: #637d51; box-shadow: inset 0 0 0 1px #637d51; }
+.page :is(button, summary, .priority-option, input, select) { transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease; }
+.page :is(button, summary, a, input, select):focus-visible { outline: 3px solid #b44d2d; outline-offset: 3px; }
+.page button:disabled { box-shadow: none; }
+@media (hover: hover) {
+  .page :is(.secondary-button, .text-button):hover:enabled { border-color: #637d51; background: #dce8ca; box-shadow: 0 2px 5px #294a3f18; text-decoration: none; }
+  .page .primary-button:hover:enabled { background: #183e2e; box-shadow: 0 2px 0 #10291f, 0 4px 10px #294a3f28; }
+  .page .text-button.danger:hover:enabled { color: #812b19; border-color: #bb745b; background: #f5ded2; }
+  .page details > summary:hover { border-color: #7e9860; background: #e1ecd3; }
+  .page .trip-card:has(.trip-card-select:not([aria-disabled="true"])):hover { border-color: #456d37; box-shadow: 0 4px 14px #294a3f20; }
+  .page--planner :is(.wizard-attractions-tabs, .wizard-view-toggle) button:not([aria-pressed="true"]):hover { background: #dce8ca; border-color: #78915f; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page :is(button, summary, .priority-option, input, select) { transition: none; }
+}
