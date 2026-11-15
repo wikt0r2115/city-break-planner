@@ -32,7 +32,7 @@ export type PlanItem = { id: string; attractionId: string; name: string; startsA
 export type Plan = { id: string | null; criteria: Criteria; selectedRoundTrip: RoundTrip; items: PlanItem[]; costSummary: CostSummary; createdAt: string | null; updatedAt: string | null; testData: boolean; shareUrl?: string | null; lodging?: Place | null };
 export type PlanInput = { criteria: Criteria; selectedRoundTrip: RoundTrip; items: ItemInput[]; lodging?: Place | null };
 export type Interest = 'CULTURE' | 'OUTDOORS' | 'HISTORY' | 'MIXED';
-export type Recommendations = { suggestions: { attractionId: string; reason: string }[]; aiUsed: boolean };
+export type Recommendations = { suggestions: { attractionId: string; reason: string }[] };
 export type StayCriteria = { destination: string; checkIn: string; checkOut: string; adults: number; currency: 'PLN' | 'EUR' | 'USD' | 'GBP'; rooms?: number };
 export type StayHotel = {
   hotelToken: string; name: string; stars: number | null; totalPrice: string; nightlyPrice: string | null; currency: string;

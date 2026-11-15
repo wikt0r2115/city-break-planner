@@ -22,7 +22,12 @@ function mockFetch(response?: StayResult) {
   const fetch = vi.fn(async (_url: string, init: RequestInit) => json(response ?? result(JSON.parse(String(init.body)) as StayCriteria)));
   vi.stubGlobal('fetch', fetch); return fetch;
 }
-function clickSearch() { fireEvent.click(screen.getByRole('button', { name: 'Sprawdź noclegi' })); }
+function openParameters() {
+  const summary = screen.getByText('Parametry noclegu');
+  if (!summary.closest('details')?.open) fireEvent.click(summary);
+}
+function field(name: string) { openParameters(); return screen.getByLabelText(name); }
+function clickSearch() { openParameters(); fireEvent.click(screen.getByRole('button', { name: 'Sprawdź noclegi' })); }
 async function quotes() { await screen.findByRole('link', { name: 'Sprawdź ofertę w OBO' }); }
 async function settle() { await act(async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); }); }
 beforeEach(() => { localStorage.clear(); sessionStorage.clear(); });
@@ -32,21 +37,21 @@ describe('noclegi OBO na żądanie', () => {
   it('rozdziela cache dla liczby pokoi i zachowuje cenę całego pobytu bez mnożenia', async () => {
     const fetch = mockFetch(); const { unmount } = render(<StaySearch criteria={criteria()} />);
     clickSearch(); await quotes();
-    fireEvent.change(screen.getByLabelText('Liczba pokoi'), { target: { value: '2' } });
+    fireEvent.change(field('Liczba pokoi'), { target: { value: '2' } });
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
     clickSearch(); await quotes();
     expect(JSON.parse(String(fetch.mock.calls[1][1].body))).toMatchObject({ rooms: 2, adults: 2 });
     expect(screen.getByText(/za cały pobyt · 2 os. dorosłych · 2 pokoje/)).toHaveTextContent('800,00');
     unmount(); render(<StaySearch criteria={criteria()} />); await quotes();
-    expect(screen.getByLabelText('Liczba pokoi')).toHaveValue(2);
+    expect(field('Liczba pokoi')).toHaveValue(2);
     expect(fetch).toHaveBeenCalledTimes(2);
-    fireEvent.change(screen.getByLabelText('Liczba pokoi'), { target: { value: '1' } });
+    fireEvent.change(field('Liczba pokoi'), { target: { value: '1' } });
     clickSearch(); await quotes(); expect(fetch).toHaveBeenCalledTimes(2);
   });
 
   it.each(['0', '3', '1.5'])('odrzuca niepoprawną liczbę pokoi %s przed wyszukiwaniem', (value) => {
     const fetch = mockFetch(); render(<StaySearch criteria={criteria()} />);
-    fireEvent.change(screen.getByLabelText('Liczba pokoi'), { target: { value } });
+    fireEvent.change(field('Liczba pokoi'), { target: { value } });
     clickSearch();
     expect(screen.getByText('Wybierz od 1 pokoju do liczby osób dorosłych.')).toBeInTheDocument();
     expect(fetch).not.toHaveBeenCalled();
@@ -73,9 +78,9 @@ describe('noclegi OBO na żądanie', () => {
   it('podpowiada parametry, wyszukuje dopiero po kliknięciu i pokazuje cenę całego pobytu z pochodzeniem', async () => {
     const fetch = mockFetch();
     render(<StaySearch criteria={criteria()} />);
-    expect(screen.getByLabelText('Miasto noclegu')).toHaveValue('Paryż');
-    expect(screen.getByLabelText('Zameldowanie')).toHaveValue(nextDate(7));
-    expect(screen.getByLabelText('Wymeldowanie')).toHaveValue(nextDate(9));
+    expect(field('Miasto noclegu')).toHaveValue('Paryż');
+    expect(field('Zameldowanie')).toHaveValue(nextDate(7));
+    expect(field('Wymeldowanie')).toHaveValue(nextDate(9));
     expect(screen.queryByLabelText('Liczba dorosłych')).not.toBeInTheDocument();
     expect(screen.getByText(/2 os. dorosłych · 1 pokój · liczba osób/)).toBeInTheDocument();
     expect(fetch).not.toHaveBeenCalled();
@@ -84,6 +89,7 @@ describe('noclegi OBO na żądanie', () => {
     expect(JSON.parse(String(fetch.mock.calls[0][1].body))).toEqual(stayCriteria());
     const region = screen.getByRole('region', { name: 'Noclegi OBO Travel' });
     expect(region).toHaveTextContent('800,00'); expect(region).toHaveTextContent('za cały pobyt · 2 os. dorosłych · 1 pokój');
+    fireEvent.click(screen.getByText('Szczegóły ceny i opłat'));
     expect(region).toHaveTextContent('400,00'); expect(region).toHaveTextContent('Źródło ceny: OBO Travel');
     expect(region).toHaveTextContent('Brak potwierdzenia'); expect(region).toHaveTextContent('Dodatkowo płatne');
     expect(region).toHaveTextContent('Podatek miejski: 12,00'); expect(region).toHaveTextContent('at_property');
@@ -94,10 +100,10 @@ describe('noclegi OBO na żądanie', () => {
   it('wymaga co najmniej jednej nocy i pozwala zmienić daty noclegu bez zmiany podróży', async () => {
     const fetch = mockFetch(); const trip = { ...criteria(), returnDate: nextDate(7) };
     render(<StaySearch criteria={trip} />); clickSearch();
-    expect(screen.getByLabelText('Wymeldowanie')).toHaveAttribute('aria-invalid', 'true');
-    expect(screen.getByLabelText('Wymeldowanie')).toHaveFocus();
+    expect(field('Wymeldowanie')).toHaveAttribute('aria-invalid', 'true');
+    expect(field('Wymeldowanie')).toHaveFocus();
     expect(fetch).not.toHaveBeenCalled();
-    fireEvent.change(screen.getByLabelText('Wymeldowanie'), { target: { value: nextDate(8) } });
+    fireEvent.change(field('Wymeldowanie'), { target: { value: nextDate(8) } });
     clickSearch(); await quotes();
     expect(trip.returnDate).toBe(nextDate(7));
     expect(JSON.parse(String(fetch.mock.calls[0][1].body)).checkOut).toBe(nextDate(8));
@@ -107,10 +113,10 @@ describe('noclegi OBO na żądanie', () => {
     const fetch = mockFetch();
     render(<StaySearch criteria={{ ...criteria(), departureDate: nextDate(400), returnDate: nextDate(431) }} />);
     clickSearch();
-    expect(screen.getByLabelText('Wymeldowanie')).toHaveAttribute('aria-invalid', 'true');
+    expect(field('Wymeldowanie')).toHaveAttribute('aria-invalid', 'true');
     expect(fetch).not.toHaveBeenCalled();
-    fireEvent.change(screen.getByLabelText('Wymeldowanie'), { target: { value: nextDate(430) } });
-    expect(screen.getByLabelText('Wymeldowanie')).toHaveAttribute('max', nextDate(430));
+    fireEvent.change(field('Wymeldowanie'), { target: { value: nextDate(430) } });
+    expect(field('Wymeldowanie')).toHaveAttribute('max', nextDate(430));
     clickSearch(); await quotes();
     expect(JSON.parse(String(fetch.mock.calls[0][1].body))).toMatchObject({ checkIn: nextDate(400), checkOut: nextDate(430) });
   });
@@ -118,12 +124,12 @@ describe('noclegi OBO na żądanie', () => {
   it('usuwa wyniki po edycji pól i resetuje propozycję przy zmianie kontekstu podróży', async () => {
     const fetch = mockFetch();
     const { rerender } = render(<StaySearch criteria={criteria()} />); clickSearch(); await quotes();
-    fireEvent.change(screen.getByLabelText('Miasto noclegu'), { target: { value: 'Paris' } });
+    fireEvent.change(field('Miasto noclegu'), { target: { value: 'Paris' } });
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
     expect(fetch).toHaveBeenCalledOnce();
     rerender(<StaySearch criteria={{ ...criteria(), destination: 'Londyn', departureDate: nextDate(10), returnDate: nextDate(12) }} />);
-    expect(screen.getByLabelText('Miasto noclegu')).toHaveValue('Londyn');
-    expect(screen.getByLabelText('Zameldowanie')).toHaveValue(nextDate(10));
+    expect(field('Miasto noclegu')).toHaveValue('Londyn');
+    expect(field('Zameldowanie')).toHaveValue(nextDate(10));
     expect(screen.queryByLabelText('Liczba dorosłych')).not.toBeInTheDocument();
     expect(screen.getByText(/2 os. dorosłych · 1 pokój · liczba osób/)).toBeInTheDocument();
     expect(fetch).toHaveBeenCalledOnce();
@@ -139,7 +145,7 @@ describe('noclegi OBO na żądanie', () => {
     await act(async () => resolve(json(result())));
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
     expect(screen.queryByText('Hotel testowy')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Miasto noclegu')).toHaveValue('Amsterdam');
+    expect(field('Miasto noclegu')).toHaveValue('Amsterdam');
   });
 
   it('usuwa ceny i linki dokładnie po czasie expiresAt', async () => {
@@ -191,7 +197,7 @@ describe('noclegi OBO na żądanie', () => {
     render(<StaySearch criteria={criteria()} />); clickSearch(); await settle();
     expect(screen.getByText(STAYS_UNAVAILABLE_MESSAGE)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sprawdź noclegi' })).toBeDisabled();
-    fireEvent.change(screen.getByLabelText('Miasto noclegu'), { target: { value: 'Paris' } });
+    fireEvent.change(field('Miasto noclegu'), { target: { value: 'Paris' } });
     expect(screen.getByRole('button', { name: 'Sprawdź noclegi' })).toBeDisabled();
     await act(async () => vi.advanceTimersByTime(2001));
     fetch.mockImplementation(async (_url, init) => json(result(JSON.parse(String(init.body)) as StayCriteria, { status: 'EMPTY', hotels: [], expiresAt: null })));
@@ -216,6 +222,7 @@ describe('noclegi OBO na żądanie', () => {
       { name: 'Podatek', amount: '20.00', currency: 'EUR', payableAt: 'property' },
     ];
     mockFetch(response); render(<StaySearch criteria={criteria()} />); clickSearch(); await quotes();
+    fireEvent.click(screen.getByText('Szczegóły ceny i opłat'));
     expect(screen.getByText(/Miejsce płatności niepotwierdzone/)).toBeInTheDocument();
     expect(screen.getByText(/płatne w obiekcie/)).toBeInTheDocument();
   });
@@ -236,13 +243,13 @@ describe('noclegi OBO na żądanie', () => {
 
   it('nie pobiera ponownie świeżych ofert po identycznym wyszukiwaniu i przywraca ostatnią formę', async () => {
     const fetch = mockFetch(); const { unmount } = render(<StaySearch criteria={criteria()} />);
-    fireEvent.change(screen.getByLabelText('Miasto noclegu'), { target: { value: 'Paris' } });
+    fireEvent.change(field('Miasto noclegu'), { target: { value: 'Paris' } });
     clickSearch(); await quotes(); clickSearch(); await quotes();
     expect(fetch).toHaveBeenCalledOnce();
     unmount(); render(<StaySearch criteria={criteria()} />); await quotes();
-    expect(screen.getByLabelText('Miasto noclegu')).toHaveValue('Paris');
+    expect(field('Miasto noclegu')).toHaveValue('Paris');
     expect(fetch).toHaveBeenCalledOnce();
-    fireEvent.change(screen.getByLabelText('Miasto noclegu'), { target: { value: 'Paryż' } });
+    fireEvent.change(field('Miasto noclegu'), { target: { value: 'Paryż' } });
     clickSearch(); await quotes(); expect(fetch).toHaveBeenCalledTimes(2);
   });
 
@@ -305,11 +312,11 @@ describe('noclegi OBO na żądanie', () => {
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
 
-  it('w trybie kompaktowym stronicuje po jednym hotelu i wybiera nocleg bez dodatkowych zapytań', async () => {
+  it('stronicuje po jednym hotelu i wybiera nocleg bez dodatkowych zapytań', async () => {
     const response = result();
     response.hotels = [0, 1, 2].map((index) => ({ ...response.hotels[0], hotelToken: `hotel-${index}`, name: `Hotel ${index + 1}` }));
     const fetch = mockFetch(response); const onSelectHotel = vi.fn();
-    const { rerender } = render(<StaySearch criteria={criteria()} compact onSelectHotel={onSelectHotel} />);
+    const { rerender } = render(<StaySearch criteria={criteria()} onSelectHotel={onSelectHotel} />);
     clickSearch(); await quotes();
     expect(screen.getByText('Nocleg 1 z 3')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Poprzedni nocleg' })).toBeDisabled();
@@ -325,7 +332,7 @@ describe('noclegi OBO na żądanie', () => {
     const choose = screen.getByRole('button', { name: 'Wybierz nocleg' });
     expect(choose).toHaveAttribute('aria-pressed', 'false'); fireEvent.click(choose);
     expect(onSelectHotel).toHaveBeenCalledWith('hotel-1');
-    rerender(<StaySearch criteria={criteria()} compact onSelectHotel={onSelectHotel} selectedHotelToken="hotel-1" />);
+    rerender(<StaySearch criteria={criteria()} onSelectHotel={onSelectHotel} selectedHotelToken="hotel-1" />);
     expect(screen.getByRole('button', { name: 'Wybrany nocleg' })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(screen.getByRole('button', { name: 'Następny nocleg' }));
     expect(screen.getByText('Nocleg 3 z 3')).toBeInTheDocument();
@@ -341,7 +348,7 @@ describe('noclegi OBO na żądanie', () => {
   it('ukrycie przez HTML hidden zachowuje cache i aktywny czas wygaśnięcia bez nowej sieci', async () => {
     vi.useFakeTimers(); vi.setSystemTime('2026-11-14T10:00:00Z');
     const fetch = mockFetch(); const onHotelsChange = vi.fn(); const onSelectHotel = vi.fn();
-    const content = (hidden: boolean) => <div hidden={hidden}><StaySearch criteria={criteria()} compact onHotelsChange={onHotelsChange} onSelectHotel={onSelectHotel} /></div>;
+    const content = (hidden: boolean) => <div hidden={hidden}><StaySearch criteria={criteria()} onHotelsChange={onHotelsChange} onSelectHotel={onSelectHotel} /></div>;
     const { rerender } = render(content(false)); clickSearch(); await settle();
     rerender(content(true));
     await act(async () => vi.advanceTimersByTime(60001));

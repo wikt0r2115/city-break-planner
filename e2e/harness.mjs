@@ -110,7 +110,6 @@ export async function startApp({ mode = 'demo', controlledFaults = false } = {})
       SERVER_ADDRESS: '127.0.0.1', SERVER_PORT: String(apiPort),
       SPRING_DATASOURCE_URL: `jdbc:sqlite:${path.join(directory, 'plans.db')}`,
       APP_CORS_ALLOWED_ORIGINS: url, APP_FRONTEND_BASE_URL: url, APP_DATA_MODE: dataMode,
-      OPENAI_API_KEY: '',
     }, path.join(directory, 'backend.log'));
     await ready(backend, `${api}/health`);
   };

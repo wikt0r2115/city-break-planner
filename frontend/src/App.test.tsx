@@ -23,7 +23,7 @@ function mockApi() {
     if (url.endsWith('/places')) return json({ places: [], testData: true });
     if (url.includes('/searches')) return json({ ...result, criteria: JSON.parse(String(options.body)) });
     if (url.endsWith('/recommendations')) return json({
-      suggestions: [{ attractionId: 'test-gallery', reason: 'Pasuje do zainteresowań.' }], aiUsed: false,
+      suggestions: [{ attractionId: 'test-gallery', reason: 'Pasuje do zainteresowań.' }],
     });
     if (url.endsWith('/plans/preview')) { const input = JSON.parse(String(options.body)) as PlanInput; previews.push(input); return json(planFor(input)); }
     if (url.endsWith('/plans') && options.method === 'POST') { const input = JSON.parse(String(options.body)) as PlanInput; return json({ plan: { ...planFor(input), id: savedPlan.id, shareUrl: savedPlan.shareUrl }, ownerToken: 'private-test-owner-token' }, 201); }
@@ -138,6 +138,7 @@ describe('wyszukiwanie i planowanie z API', () => {
     fireEvent.change(screen.getByLabelText('Zainteresowania'), { target: { value: 'CULTURE' } });
     fireEvent.click(recommend);
     const add = await screen.findByRole('button', { name: 'Dodaj do planu: Galeria testowa' });
+    expect(screen.getByText('Propozycje z katalogu')).toBeInTheDocument();
     expect(JSON.parse(String(requested()[0][1]?.body))).toMatchObject({
       roundTripId: result.roundTripOptions[0].id, interest: 'CULTURE', budgetPln: 0,
     });

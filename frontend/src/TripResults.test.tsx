@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TripDetails } from './components';
 import { TripResults } from './TripResults';
 import { regularTrip, result } from './test/fixtures';
@@ -8,13 +8,17 @@ import type { RoundTrip, SearchResult, Segment } from './types';
 const trips = Array.from({ length: 7 }, (_, index) => ({ ...regularTrip, id: String(index + 1) }));
 const manyResults = { ...result, roundTripOptions: trips };
 
+function viewport(width: number) {
+  vi.stubGlobal('matchMedia', (query: string) => ({
+    matches: width >= Number(/min-width: (\d+)px/.exec(query)?.[1]),
+    addEventListener: vi.fn(), removeEventListener: vi.fn(),
+  }));
+}
+beforeEach(() => viewport(800));
+
 describe('stronicowane warianty połączeń', () => {
-  it.each([[false, 2, 4], [true, 3, 3]])('pokazuje właściwą liczbę kart (szeroki ekran: %s)', (wide, size, pages) => {
-    vi.stubGlobal('matchMedia', () => ({
-      matches: wide,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    }));
+  it.each([[390, 1, 7], [800, 2, 4], [1440, 3, 3]])('pokazuje właściwą liczbę kart przy szerokości %s px', (width, size, pages) => {
+    viewport(width);
     const onSelect = vi.fn();
     render(<TripResults result={manyResults} selectedId={trips[0].id} busy={false} onSelect={onSelect} />);
     const previous = screen.getByRole('button', { name: 'Poprzednia' });
@@ -47,6 +51,7 @@ describe('stronicowane warianty połączeń', () => {
     const onSelect = vi.fn();
     render(<TripResults result={manyResults} selectedId={trips[0].id} busy={false} onSelect={onSelect} />);
     const card = within(screen.getAllByRole('article')[1]);
+    for (const summary of card.getAllByText(/^Ceny i etapy:/)) fireEvent.click(summary);
     for (const [name, url] of [['Strona przewoźnika', 'https://example.com/booking'], ['Otwórz mapę', 'https://example.com/map']]) {
       const link = card.getAllByRole('link', { name })[0];
       expect(link).toHaveAttribute('href', url);
@@ -92,6 +97,8 @@ describe('pilotaż rozkładów kolejowych', () => {
 
   it('pokazuje stacje, metryki, pochodzenie i rodzaj rozkładu przy dostępnych kursach', () => {
     render(<TripResults result={{ ...result, roundTripOptions: [railTrip], sources: [source('UPSTREAM_FAILURE')] }} busy={false} onSelect={vi.fn()} />);
+    fireEvent.click(screen.getByText('Ceny i etapy: wyjazd'));
+    fireEvent.click(screen.getByText('Ceny i etapy: powrót'));
     const outbound = within(screen.getByRole('region', { name: 'Wyjazd' }));
     expect(outbound.getByText('Gdańsk Główny → Wejherowo')).toBeInTheDocument();
     expect(outbound.getByText(railSegment.operator)).toBeInTheDocument();
@@ -116,10 +123,7 @@ describe('pilotaż rozkładów kolejowych', () => {
   });
 
   it.each<[SearchResult['status'], string, string]>([
-    ['PARTIAL', 'AMBIGUOUS_PLACE', 'Doprecyzuj miejsce'],
     ['PARTIAL', 'UNSUPPORTED_ROUTE', 'Trasa poza zakresem planera'],
-    ['PARTIAL', 'OUTSIDE_COVERAGE', 'Brak rozkładu dla wybranych dat'],
-    ['PROVIDER_ERROR', 'UPSTREAM_FAILURE', 'Nie udało się sprawdzić połączeń'],
     ['PROVIDER_ERROR', 'UPSTREAM_FAILURE', 'Nie udało się sprawdzić połączeń'],
   ])('pokazuje przyczynę pustego wyniku %s/%s', (status, reason, title) => {
     render(<TripResults result={{ ...result, status, roundTripOptions: [], sources: [source(reason)] }} busy={false} onSelect={vi.fn()} />);

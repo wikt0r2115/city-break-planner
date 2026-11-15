@@ -52,7 +52,7 @@ try {
   const input = { criteria, roundTripId: budget[0].id, interest: 'OUTDOORS', budgetPln: 0 };
   const suggestions = await apiRequest(app, 'POST', '/recommendations', input);
   assert.equal(suggestions.status, 200);
-  assert.equal(suggestions.body.aiUsed, false);
+  assert.equal(Object.hasOwn(suggestions.body, 'aiUsed'), false);
   assert.deepEqual(suggestions.body.suggestions.map((item) => item.attractionId), ['tuileries']);
   assert.equal((await apiRequest(app, 'POST', '/recommendations', { ...input, budgetPln: -1 })).status, 400);
 
@@ -77,7 +77,7 @@ try {
   await page.getByRole('button',{name:'Dalej: Podsumowanie',exact:true}).click();
   await page.getByRole('button', { name: /Zapisz plan/ }).click();
   await page.getByLabel('Link tylko do odczytu').waitFor();
-  console.log('PASS showcase: SQLite, all six directions, modes, ranking, recommendations fallback and browser save.');
+  console.log('PASS showcase: SQLite, all six directions, modes, ranking, catalog recommendations and browser save.');
 } finally {
   try { await browser?.close(); } finally { await app.stop(); }
 }

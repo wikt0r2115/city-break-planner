@@ -102,7 +102,7 @@ export async function searchStays(criteria: StayCriteria, signal?: AbortSignal):
 }
 export async function suggestAttractions(criteria: Criteria, roundTripId: string, interest: Interest, budgetPln: number): Promise<Recommendations> {
   const body = await request('/recommendations', 'POST', { criteria, roundTripId, interest, budgetPln }, undefined, undefined, 12000);
-  if (!record(body) || typeof body.aiUsed !== 'boolean' || !Array.isArray(body.suggestions)
+  if (!record(body) || !Array.isArray(body.suggestions)
       || !body.suggestions.every((item) => record(item) && typeof item.attractionId === 'string' && typeof item.reason === 'string')) {
     throw new ApiError('Nie udało się odczytać propozycji atrakcji.');
   }

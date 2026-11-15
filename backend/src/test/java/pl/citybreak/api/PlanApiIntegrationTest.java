@@ -39,6 +39,20 @@ class PlanApiIntegrationTest {
         repository.find("initialize-schema");
         jdbc.update("DELETE FROM plans");
     }
+    @Test void recommendationsReturnOnlyCatalogSuggestionsWithinBudget() throws Exception {
+        ObjectNode input = json.createObjectNode();
+        input.set("criteria", criteria().put("travelers", 2));
+        input.put("roundTripId", "demo-budget").put("interest", "OUTDOORS").put("budgetPln", 0);
+        var response = mvc.perform(post("/api/v1/recommendations").contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsBytes(input)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.suggestions.length()").value(1))
+                .andExpect(jsonPath("$.suggestions[0].attractionId").value("demo-park"))
+                .andExpect(jsonPath("$.suggestions[0].reason").isNotEmpty())
+                .andExpect(jsonPath("$.aiUsed").doesNotExist())
+                .andReturn().getResponse();
+        assertThat(json.readTree(response.getContentAsString()).size()).isEqualTo(1);
+    }
     @Test void fullLifecycleAndIndependentPublicReadFollowUpdates() throws Exception {
         ObjectNode input = input("demo-budget");
         JsonNode created = create(input);

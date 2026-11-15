@@ -23,8 +23,7 @@ await once(listener, 'listening');
 const port = listener.address().port;
 await new Promise((resolve) => listener.close(resolve));
 const origin = `http://localhost:${port}`;
-const environment = { ...process.env, APP_PORT: String(port), APP_BIND_ADDRESS: '127.0.0.1',
-  OPENAI_API_KEY: '' };
+const environment = { ...process.env, APP_PORT: String(port), APP_BIND_ADDRESS: '127.0.0.1' };
 delete environment.APP_FRONTEND_BASE_URL;
 delete environment.APP_CORS_ALLOWED_ORIGINS;
 const composePrefix = ['compose', '--project-name', project, '--env-file', envFile, '--file', path.join(root, 'compose.yaml')];
@@ -171,7 +170,7 @@ try {
   await fs.writeFile(path.join(root, 'e2e', 'artifacts', 'docker-report.json'), JSON.stringify({ checkedAt: new Date().toISOString(), dataMode: 'demo',
     environment: { docker: versions[0].stdout.trim(), compose: versions[1].stdout.trim(), architecture: process.arch },
     checks: ['fresh image build from source', 'fresh SQLite volume and same-origin API', 'non-root processes', 'backend not published', 'API errors remain JSON',
-      'browser search, catalog fallback and attraction saved', 'SPA owner and public routes', 'correct share URL with custom port', 'public token cannot delete',
+      'browser search, catalog recommendations and attraction saved', 'SPA owner and public routes', 'correct share URL with custom port', 'public token cannot delete',
       'no request tokens in logs after proxy outage', 'proxy recovery after backend recreation', 'SQLite persistence after compose down/up', 'owner deletion revokes link'] }, null, 2));
   console.log('PASS Docker: source builds, frontend/API/SQLite, browser CRUD, private/public routing, non-root, safe logs, proxy recovery and persistent volume.');
 } finally { await cleanup(); }

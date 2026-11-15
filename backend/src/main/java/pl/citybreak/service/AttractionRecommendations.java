@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 import pl.citybreak.model.Model.*;
 import pl.citybreak.planning.Planner;
 import pl.citybreak.provider.TravelProvider;
-import pl.citybreak.provider.ai.OpenAiAttractionAdvisor;
 
 @Service
 public class AttractionRecommendations {
@@ -18,14 +17,11 @@ public class AttractionRecommendations {
     private final TravelProvider transport;
     private final Planner planner;
     private final InputValidation validation;
-    private final OpenAiAttractionAdvisor advisor;
 
-    public AttractionRecommendations(TravelProvider transport, Planner planner, InputValidation validation,
-            OpenAiAttractionAdvisor advisor) {
+    public AttractionRecommendations(TravelProvider transport, Planner planner, InputValidation validation) {
         this.transport = transport;
         this.planner = planner;
         this.validation = validation;
-        this.advisor = advisor;
     }
 
     public Recommendations suggest(RecommendationInput input) {
@@ -47,31 +43,21 @@ public class AttractionRecommendations {
             var option = new Option(attraction, catalog.interestOf(attraction.id()), price);
             if (fits(List.of(option), trip, budget, catalog.attractions())) eligible.put(attraction.id(), option);
         }
-        List<Recommendation> ranked = advisor.suggest(criteria.destination(), trip.timeAtDestinationMinutes(),
-                input.interest(), input.budgetPln(), List.copyOf(eligible.values()));
         List<Option> selected = new ArrayList<>();
         List<Recommendation> suggestions = new ArrayList<>();
-        for (var recommendation : ranked) {
-            if (selected.size() >= MAX_SUGGESTIONS) break;
-            Option option = eligible.get(recommendation.attractionId());
-            if (option == null || selected.contains(option)) continue;
-            if (addIfFits(option, selected, trip, budget, catalog.attractions())) suggestions.add(recommendation);
-        }
-        boolean aiUsed = !suggestions.isEmpty();
         for (Option option : eligible.values().stream()
                 .sorted(Comparator.comparing(candidate -> candidate.category() != input.interest())).toList()) {
             if (selected.size() >= MAX_SUGGESTIONS) break;
-            if (selected.contains(option)) continue;
             if (addIfFits(option, selected, trip, budget, catalog.attractions())) {
                 String reason = option.category() == input.interest() ? "Pasuje do Twoich zainteresowań."
                         : "Mieści się w czasie i budżecie na zwiedzanie.";
                 suggestions.add(new Recommendation(option.attraction().id(), reason));
             }
         }
-        return new Recommendations(List.copyOf(suggestions), aiUsed);
+        return new Recommendations(List.copyOf(suggestions));
     }
 
-    public record Option(Attraction attraction, Interest category, BigDecimal price) {}
+    private record Option(Attraction attraction, Interest category, BigDecimal price) {}
 
     private boolean addIfFits(Option option, List<Option> selected, RoundTrip trip,
             BigDecimal budget, List<Attraction> attractions) {

@@ -19,7 +19,7 @@ function errorsFor(form: StayCriteria): Partial<Record<keyof StayCriteria, strin
   return errors;
 }
 
-export function oboBookingUrl(value: string): string | undefined {
+function oboBookingUrl(value: string): string | undefined {
   try {
     const url = new URL(value);
     return url.protocol === 'https:' && ['onebookingonline.com', 'www.onebookingonline.com'].includes(url.hostname)
@@ -44,9 +44,9 @@ function hasLocation(hotel: StayHotel) {
     && Number.isFinite(hotel.location.longitude) && Math.abs(hotel.location.longitude) <= 180;
 }
 
-export function StaySearch({ criteria, onHotelsChange, onShowHotel, compact = false, selectedHotelToken = null, onSelectHotel, disabled = false, onCriteriaChange }: {
+export function StaySearch({ criteria, onHotelsChange, onShowHotel, selectedHotelToken = null, onSelectHotel, disabled = false, onCriteriaChange }: {
   criteria: Criteria; onHotelsChange?: (hotels: StayHotel[]) => void; onShowHotel?: (hotelToken: string) => void;
-  compact?: boolean; selectedHotelToken?: string | null; onSelectHotel?: (hotelToken: string) => void; disabled?: boolean; onCriteriaChange?: () => void;
+  selectedHotelToken?: string | null; onSelectHotel?: (hotelToken: string) => void; disabled?: boolean; onCriteriaChange?: () => void;
 }) {
   const id = useId();
   const context = travelContext(criteria);
@@ -70,7 +70,7 @@ export function StaySearch({ criteria, onHotelsChange, onShowHotel, compact = fa
   function publish(response: StayResult | null) { currentResult.current = response; setResult(response); setHotelPage(0); hotelsCallback.current?.(response?.hotels ?? []); }
   useEffect(() => {
     if (searchControls.current) searchControls.current.open = !result?.hotels.length;
-  }, [result, compact]);
+  }, [result]);
   function invalidate() { generation.current++; active.current?.abort(); active.current = null; setBusy(false); publish(null); }
   function expire() {
     const quoted = currentResult.current;
@@ -118,10 +118,10 @@ export function StaySearch({ criteria, onHotelsChange, onShowHotel, compact = fa
   }, [cooldownUntil]);
   const cooldown = Math.max(0, Math.ceil((cooldownUntil - clock) / 1000));
   useEffect(() => {
-    if (!compact || !result || !selectedHotelToken) return;
+    if (!result || !selectedHotelToken) return;
     const selectedIndex = result.hotels.findIndex((hotel) => hotel.hotelToken === selectedHotelToken);
     if (selectedIndex >= 0) setHotelPage(selectedIndex);
-  }, [compact, selectedHotelToken, result]);
+  }, [selectedHotelToken, result]);
 
   function change<K extends keyof StayCriteria>(field: K, value: StayCriteria[K]) {
     if (disabled) return;
@@ -167,7 +167,7 @@ export function StaySearch({ criteria, onHotelsChange, onShowHotel, compact = fa
   const errorAttributes = (field: keyof StayCriteria) => ({ 'aria-invalid': !!errors[field], 'aria-describedby': errors[field] ? `${id}-${field}-error` : undefined });
   const lastCheckout = dateValue(form.checkIn) ? new Date(Date.parse(form.checkIn) + 30 * 86400000).toISOString().slice(0, 10) : undefined;
   const activePage = Math.min(hotelPage, Math.max(0, (result?.hotels.length ?? 0) - 1));
-  const displayedHotels = compact ? result?.hotels.slice(activePage, activePage + 1) : result?.hotels;
+  const displayedHotels = result?.hotels.slice(activePage, activePage + 1);
 
   const searchForm = <form onSubmit={search} noValidate><fieldset className="unframed" disabled={disabled || busy}><legend className="sr-only">Parametry wyszukiwania noclegów</legend>
       <div className="stay-form-grid">
@@ -180,19 +180,18 @@ export function StaySearch({ criteria, onHotelsChange, onShowHotel, compact = fa
       <button type="submit" className="secondary-button" disabled={disabled || busy || cooldown > 0}>Sprawdź noclegi</button>
     </fieldset></form>;
 
-  return <section className={`panel stay-search${compact ? ' is-compact stay-search--compact' : ''}`} aria-label="Noclegi OBO Travel">
+  return <section className="panel stay-search" aria-label="Noclegi OBO Travel">
     <div className="section-heading"><div><p className="eyebrow">RZECZYWISTE OFERTY NOCLEGÓW · OBO TRAVEL</p><h3 id={`${id}-title`}>Nocleg na Twój wyjazd</h3></div><span className="small-note">{roomsText(form.rooms ?? 1)} · wycena osobno</span></div>
     <p className="muted">{form.adults} os. dorosłych · {roomsText(form.rooms ?? 1)} · liczba osób z kroku Kierunek. Nocleg wyceniany osobno.</p>
     {fieldError('adults')}
-    {compact ? <details className="stay-search-controls" ref={searchControls}><summary>Parametry noclegu</summary>{searchForm}</details> : searchForm}
+    <details className="stay-search-controls" ref={searchControls}><summary>Parametry noclegu</summary>{searchForm}</details>
     {busy && <p role="status">Sprawdzamy dostępne noclegi…</p>}
     {error && <p className="warning-text" role="alert">{error}</p>}
     {(expired || result && !quoteIsCurrent) && <p role="status">Ceny wygasły. Sprawdź ponownie.</p>}
     {cooldown > 0 && <p role="status">Kolejne wyszukiwanie za {cooldown} s.</p>}
     {quoteIsCurrent && result && <div className="stay-results" aria-live="polite">
       {!result.hotels.length && <p role="status">{STAYS_UNAVAILABLE_MESSAGE}</p>}
-      {!compact && result.hotels.length > 0 && <p className="muted">{result.criteria.destination} · {result.criteria.checkIn} — {result.criteria.checkOut} · {result.criteria.adults} os. dorosłych · {roomsText(result.criteria.rooms ?? 1)}</p>}
-      {compact && result.hotels.length > 1 && <nav className="compact-pagination" aria-label="Strony noclegów">
+      {result.hotels.length > 1 && <nav className="compact-pagination" aria-label="Strony noclegów">
         <button type="button" className="text-button" disabled={activePage === 0} onClick={() => setHotelPage((page) => Math.max(0, page - 1))}>Poprzedni nocleg</button>
         <span role="status">Nocleg {activePage + 1} z {result.hotels.length}</span>
         <button type="button" className="text-button" disabled={activePage >= result.hotels.length - 1} onClick={() => setHotelPage((page) => Math.min(result.hotels.length - 1, page + 1))}>Następny nocleg</button>
@@ -201,7 +200,7 @@ export function StaySearch({ criteria, onHotelsChange, onShowHotel, compact = fa
         const bookingUrl = oboBookingUrl(hotel.bookingUrl);
         const selected = selectedHotelToken === hotel.hotelToken;
         const priceDetails = <>
-          {compact && hotel.nightlyPrice !== null && <p>{money(hotel.nightlyPrice, hotel.currency)} za noc</p>}
+          {hotel.nightlyPrice !== null && <p>{money(hotel.nightlyPrice, hotel.currency)} za noc</p>}
           <p className="stay-source">Źródło ceny: OBO Travel · Wycena: {moment(hotel.quotedAt)} · Ważna do: {moment(hotel.expiresAt)}</p>
           <dl className="stay-fees"><div><dt>Podatki</dt><dd>{hotel.taxesIncluded === null ? 'Brak potwierdzenia' : hotel.taxesIncluded ? 'Wliczone w cenę' : 'Dodatkowo płatne'}</dd></div><div><dt>Opłaty</dt><dd>{hotel.feesIncluded === null ? 'Brak potwierdzenia' : hotel.feesIncluded ? 'Wliczone w cenę' : 'Dodatkowo płatne'}</dd></div></dl>
           {hotel.extraCharges.length > 0 && <ul className="stay-extra-charges">{hotel.extraCharges.map((charge, chargeIndex) => <li key={chargeIndex}>{charge.name}: {money(charge.amount, charge.currency)} · {charge.payableAt === 'property' ? 'płatne w obiekcie' : charge.payableAt ?? 'Miejsce płatności niepotwierdzone'}</li>)}</ul>}
@@ -211,9 +210,8 @@ export function StaySearch({ criteria, onHotelsChange, onShowHotel, compact = fa
           <HotelPhoto hotel={hotel} />
           <h4>{hotel.name}{hotel.stars !== null && <span className="stay-stars" aria-label={`${hotel.stars} gwiazdek`}> · {hotel.stars} ★</span>}</h4>
           <p className="stay-total"><strong>{money(hotel.totalPrice, hotel.currency)}</strong> za cały pobyt · {result.criteria.adults} os. dorosłych · {roomsText(result.criteria.rooms ?? 1)}</p>
-          {!compact && hotel.nightlyPrice !== null && <p>{money(hotel.nightlyPrice, hotel.currency)} za noc</p>}
           {onSelectHotel && <button type="button" className="secondary-button stay-select-button" aria-pressed={selected} disabled={disabled || busy || !quoteIsCurrent} onClick={() => selectHotel(hotel.hotelToken)}>{selected ? 'Wybrany nocleg' : 'Wybierz nocleg'}</button>}
-          {compact ? <><p className="stay-source">Źródło ceny: OBO Travel</p><details className="stay-price-details"><summary>Szczegóły ceny i opłat</summary>{priceDetails}</details></> : priceDetails}
+          <p className="stay-source">Źródło ceny: OBO Travel</p><details className="stay-price-details"><summary>Szczegóły ceny i opłat</summary>{priceDetails}</details>
           {hasLocation(hotel) ? onShowHotel && <button type="button" className="text-button stay-map-button" disabled={!!selectedHotelToken && !selected} title={selectedHotelToken && !selected ? 'Wybierz ten nocleg, aby zastąpić obecny na mapie.' : undefined} onClick={() => onShowHotel(hotel.hotelToken)}>Pokaż na mapie</button> : <p className="muted">Lokalizacja hotelu niedostępna.</p>}
           {bookingUrl ? <a href={bookingUrl} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer" onClick={checkLink} onAuxClick={checkLink} onContextMenu={checkLink}>Sprawdź ofertę w OBO <span aria-hidden="true">↗</span></a> : <p className="warning-text">Link do oferty jest niedostępny.</p>}
         </li>;

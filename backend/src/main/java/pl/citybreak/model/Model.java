@@ -85,7 +85,7 @@ public final class Model {
             List<Source> sources, boolean testData) {}
     public record RecommendationInput(Criteria criteria, String roundTripId, Interest interest, Integer budgetPln) {}
     public record Recommendation(String attractionId, String reason) {}
-    public record Recommendations(List<Recommendation> suggestions, boolean aiUsed) {}
+    public record Recommendations(List<Recommendation> suggestions) {}
     public record ItemInput(String id, String attractionId, OffsetDateTime startsAt, Integer visitMinutes,
             Boolean automaticTime) {
         public ItemInput(String id, String attractionId, OffsetDateTime startsAt, Integer visitMinutes) {

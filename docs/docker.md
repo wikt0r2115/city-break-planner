@@ -36,9 +36,6 @@ dostosuj wartości i dodawaj `--env-file .env.docker` do poleceń Compose.
 | `APP_PORT` | `8080` | Port aplikacji na komputerze użytkownika. |
 | `APP_BIND_ADDRESS` | `127.0.0.1` | Adres nasłuchu opublikowanego portu. |
 | `APP_FRONTEND_BASE_URL` | `http://localhost:${APP_PORT}` | Adres zapisanych linków i dozwolony origin API; zwykle nie wymaga ustawienia. |
-| `OPENAI_API_KEY` | pusta | Opcjonalny klucz backendu do rekomendowania atrakcji. |
-| `APP_AI_MODEL` | `gpt-6-luna` | Model używany do rekomendowania atrakcji. |
-| `APP_AI_DAILY_REQUESTS` | `4` | Dzienny limit prób w procesie backendu. |
 | `VITE_MAPTILER_API_KEY` | pusta | Publiczny klucz mapy MapTiler, przekazywany podczas budowania frontendu. |
 | `APP_OBO_ENABLED` | `true` | Włącza testową sekcję rzeczywistych noclegów OBO. |
 | `APP_OBO_TIMEOUT_SECONDS` | `25` | Limit odczytu OBO w sekundach, zakres 1–30. |
@@ -50,8 +47,8 @@ Lokalne `.env`, bazy, `target` i `node_modules` są wykluczone z kontekstu
 budowania. `VITE_MAPTILER_API_KEY` jest publicznym kluczem przeglądarkowym,
 obecnym w zbudowanych plikach aplikacji. Ogranicz go w MapTiler przez
 Allowed HTTP origins: `localhost` dla lokalnego uruchomienia, osobny klucz
-z rzeczywistą domeną dla produkcji. Service tokeny MapTiler i klucz OpenAI
-pozostają poufne i nigdy nie trafiają do zmiennych `VITE_*`.
+z rzeczywistą domeną dla produkcji. Mapa nie korzysta z service tokenów;
+poufny `OBO_API_KEY` pozostaje na backendzie i nie trafia do zmiennych `VITE_*`.
 
 Mapę włączysz przez dodanie `VITE_MAPTILER_API_KEY` do lokalnego
 `.env.docker` i uruchomienie `docker compose --env-file .env.docker up --build -d`.
@@ -88,34 +85,10 @@ npm run test:docker
 
 Test tworzy własny projekt Compose, losowy port i pusty wolumen. Buduje
 oba obrazy przez `docker compose build --pull --no-cache`. Sprawdza
-w przeglądarce wyszukanie połączeń, rekomendacje z katalogu przy pustym
-`OPENAI_API_KEY`, zapis atrakcji, publiczny odczyt i zachowanie planu po
+w przeglądarce wyszukanie połączeń, rekomendacje z katalogu,
+zapis atrakcji, publiczny odczyt i zachowanie planu po
 `down` i ponownym `up`. Na końcu usuwa zasoby swojego projektu testowego.
 
 Ten sam test uruchamia się w zadaniu „Docker Compose clean start” w CI.
 Raport jest dostępny jako artefakt przebiegu GitHub Actions i lokalnie
 w `e2e/artifacts/docker-report.json`.
-
-### Wynik z 12 listopada 2026
-
-**PASS** na Linux x86_64, Docker 29.9.1, Compose 5.6.0:
-
-- `docker compose config --quiet`, konfiguracja niestandardowego portu
-  i budowanie obu obrazów z kodu źródłowego.
-- `DOCKER_TEST_LIVE_DATE=2026-11-14 npm run test:docker`: przeglądarka
-  wykonała wyszukanie, zapis i publiczny odczyt przez rzeczywiste kontenery.
-- Potwierdzono SQLite w świeżym wolumenie, procesy bez roota, brak
-  opublikowanego portu backendu oraz poprawne błędy JSON z API.
-- Właściwy adres linków działa z losowym portem; działają też bezpośrednie
-  wejścia na trasy SPA właściciela i odbiorcy.
-- Po zatrzymaniu backendu tokeny nie pojawiły się w stdout ani stderr
-  logów. Po jego odtworzeniu proxy ponownie osiągnęło zdrowe API.
-- Po pełnym `down` i kolejnym `up` wybrane punkty nadal były zapisane;
-  usunięcie planu przez właściciela unieważniło publiczny link.
-- W trybie `live` kontener pobrał rzeczywiste lokalne połączenia dla
-  14.11.2026. Potwierdzono odczyt HTTPS i dostęp do źródeł z kontenera.
-- Niezależna recenzja infrastruktury i bezpieczeństwa: bez otwartych blokad.
-
-[Zapis wykonania](evidence/sol122-docker-verification.json).
-Test po sprawdzeniu usunął wyłącznie zasoby swojego unikalnego projektu.
-Windows, macOS i ARM64 nie były weryfikowane.

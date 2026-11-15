@@ -41,7 +41,6 @@
 .page--planner .brand-subtitle { font-size: 8px; margin-top: 5px; }
 .page--planner .header-promise { min-width: 0; text-align: right; }
 .page--planner .header-promise h1 { margin: 0; font-size: clamp(19px, 2.2vw, 30px); line-height: 1.15; letter-spacing: -1px; }
-.page--planner .header-promise h1 br { display: none; }
 .page--planner .header-promise p { margin: 5px 0 0; max-width: 650px; font-size: 11px; line-height: 1.45; color: #667265; }
 .page--planner .header .test-banner { margin: 9px 0 0; padding: 5px 10px; border-radius: 7px; font-size: 11px; line-height: 1.4; }
 .page--planner .header .test-banner strong { display: inline; margin-right: 5px; }
@@ -94,7 +93,6 @@
 .page--planner .field-error,
 .page--planner .place-hint { margin: 4px 0 0; font-size: 11px; }
 .page--planner .form-grid { grid-template-columns: 1fr 1fr .85fr .85fr .65fr; gap: 12px; }
-.page--planner .coverage-note { margin: 0 0 12px; padding: 8px 10px; font-size: 11px; }
 .page--planner .priority-picker { margin-top: 14px; }
 .page--planner .priority-picker legend { margin-bottom: 8px; font-size: 11px; }
 .page--planner .priority-options { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
@@ -109,8 +107,7 @@
 .page--planner .secondary-button { min-height: 40px; padding: 9px 13px; gap: 15px; font-size: 12px; }
 .page--planner .text-button { font-size: 11px; min-height: 36px; }
 
-.page--planner .results,
-.page--planner .editor { margin-top: 0; }
+.page--planner .results { margin-top: 0; }
 .page--planner .option-grid { grid-template-columns: repeat(3, minmax(0, 360px)); gap: 12px; align-items: start; justify-content: center; }
 .page--planner .trip-card { padding: 15px; border-radius: 12px; }
 .page--planner .trip-leg-details { position: relative; z-index: 2; font-size: 12px; }
@@ -139,21 +136,13 @@
 .page--planner .wizard-attractions-tabs { margin-bottom: 12px; }
 .page--planner .wizard-attractions-tabs button,
 .page--planner .wizard-view-toggle button { flex: 1; min-height: 36px; padding: 8px 12px; border-radius: 7px; background: transparent; color: #526a58; font-size: 12px; font-weight: 650; }
-.page--planner .wizard-attractions-tabs button[aria-selected="true"],
 .page--planner .wizard-attractions-tabs button[aria-pressed="true"],
 .page--planner .wizard-view-toggle button[aria-pressed="true"] { color: #294a3f; background: #fffefa; box-shadow: 0 2px 6px #2638280c; }
 .page--planner .wizard-view-toggle { display: none; flex: 0 0 auto; }
-.page--planner .editor-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
 .page--planner .attraction-list > h3 { margin: 0 0 10px; }
 .page--planner .attraction-card { padding: 13px; margin-bottom: 10px; }
 .page--planner .attraction-card > p { margin: 6px 0; }
 .page--planner .attraction-card .secondary-button { margin-top: 7px; }
-.page--planner .recommendation-form { grid-template-columns: 1fr 1fr; gap: 9px; }
-.page--planner .recommendation-form > h4,
-.page--planner .recommendation-form > button,
-.page--planner .recommendation-form > [role],
-.page--planner .recommendation-form > .field-error { grid-column: 1 / -1; }
-.page--planner .recommendation-form > button { justify-self: stretch; }
 .page--planner details.recommendation-form { display: block; }
 .page--planner details.recommendation-form > summary { min-height: 32px; font-weight: 650; }
 .page--planner details.recommendation-form > label { margin-top: 8px; }
@@ -181,29 +170,26 @@
 .page--planner .delete-section { margin-top: 12px; padding-top: 7px; }
 .page--planner .wizard-summary { display: grid; gap: 12px; }
 .page--planner .wizard-summary .panel { margin: 0; }
-.page--planner .wizard-summary dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 7px 14px; margin: 10px 0; font-size: 12px; }
-.page--planner .wizard-summary dt { color: #667265; }
-.page--planner .wizard-summary dd { margin: 0; overflow-wrap: anywhere; }
 
-.page--planner .stay-search--compact { margin: 0; }
-.page--planner .stay-search--compact > .muted { margin: 0 0 10px; }
-.page--planner .stay-search--compact .stay-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin: 10px 0; }
-.page--planner .stay-search--compact .stay-form-grid > :first-child { grid-column: 1 / -1; }
-.page--planner .stay-search--compact .stay-cards { grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: 10px; }
-.page--planner .stay-search--compact .stay-card { padding: 12px; }
-.page--planner .stay-search--compact .stay-card.is-selected { border-color: #637d51; box-shadow: inset 0 0 0 1px #637d51; background: #f6f8ef; }
-.page--planner .stay-search--compact .stay-select-button { width: 100%; margin-top: 6px; }
-.page--planner .stay-search--compact .stay-price-details { margin: 7px 0; border-top: 1px solid #dce1d4; padding-top: 2px; }
-.page--planner .stay-search--compact .stay-price-details > summary { font-size: 11px; color: #526a58; }
-.page--planner .stay-search--compact .stay-photo,
-.page--planner .stay-search--compact .stay-photo-placeholder { height: 90px; min-height: 90px; margin-bottom: 9px; object-fit: contain; }
-.page--planner .stay-search--compact .stay-card p { margin: 5px 0; font-size: 12px; line-height: 1.45; }
-.page--planner .stay-search--compact .stay-total strong { font-size: 19px; }
-.page--planner .stay-search--compact .stay-card .stay-source { font-size: 11px; }
-.page--planner .stay-search--compact .stay-fees { margin: 7px 0; font-size: 11px; }
-.page--planner .stay-search--compact .stay-extra-charges { margin: 6px 0; padding-left: 17px; font-size: 11px; line-height: 1.5; }
-.page--planner .stay-search--compact .stay-card a { min-height: 36px; font-size: 12px; }
-.page--planner .stay-search--compact .stay-map-button { min-height: 36px; margin-top: 3px; }
+.page--planner .stay-search { margin: 0; }
+.page--planner .stay-search > .muted { margin: 0 0 10px; }
+.page--planner .stay-search .stay-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin: 10px 0; }
+.page--planner .stay-search .stay-form-grid > :first-child { grid-column: 1 / -1; }
+.page--planner .stay-search .stay-cards { grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: 10px; }
+.page--planner .stay-search .stay-card { padding: 12px; }
+.page--planner .stay-search .stay-card.is-selected { border-color: #637d51; box-shadow: inset 0 0 0 1px #637d51; background: #f6f8ef; }
+.page--planner .stay-search .stay-select-button { width: 100%; margin-top: 6px; }
+.page--planner .stay-search .stay-price-details { margin: 7px 0; border-top: 1px solid #dce1d4; padding-top: 2px; }
+.page--planner .stay-search .stay-price-details > summary { font-size: 11px; color: #526a58; }
+.page--planner .stay-search .stay-photo,
+.page--planner .stay-search .stay-photo-placeholder { height: 90px; min-height: 90px; margin-bottom: 9px; object-fit: contain; }
+.page--planner .stay-search .stay-card p { margin: 5px 0; font-size: 12px; line-height: 1.45; }
+.page--planner .stay-search .stay-total strong { font-size: 19px; }
+.page--planner .stay-search .stay-card .stay-source { font-size: 11px; }
+.page--planner .stay-search .stay-fees { margin: 7px 0; font-size: 11px; }
+.page--planner .stay-search .stay-extra-charges { margin: 6px 0; padding-left: 17px; font-size: 11px; line-height: 1.5; }
+.page--planner .stay-search .stay-card a { min-height: 36px; font-size: 12px; }
+.page--planner .stay-search .stay-map-button { min-height: 36px; margin-top: 3px; }
 
 .page--planner .wizard-map-pane { display: flex; min-width: 0; min-height: 0; overflow: auto; padding: 3px; overscroll-behavior: contain; }
 .page--planner .wizard-map-pane .trip-map-panel { flex: 1 0 0; display: flex; flex-direction: column; min-width: 0; min-height: 0; height: 100%; margin: 0; padding: 14px; overflow: auto; }
@@ -224,7 +210,6 @@
 .page--planner .wizard-navigation { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0; padding: 10px 3px 0; border-top: 1px solid #dcded5; background: #f5f4ee; }
 .page--planner .wizard-navigation > button { flex: 0 0 auto; min-width: 116px; min-height: 44px; }
 .page--planner .wizard-nav-summary { flex: 1 1 auto; min-width: 0; text-align: center; font-size: 11px; line-height: 1.4; color: #667265; overflow-wrap: anywhere; }
-.page--planner .wizard-nav-summary p { margin: 0; }
 
 @media (max-width: 1050px) {
   .page--planner .option-grid { grid-template-columns: repeat(2, minmax(0, 360px)); }
@@ -281,7 +266,6 @@
   .page--planner .priority-option small { font-size: 11px; }
   .page--planner .search-actions { flex-wrap: wrap; gap: 9px; margin-top: 11px; }
   .page--planner .fare-select { width: 100%; }
-  .page--planner .search-actions > .primary-button { width: 100%; margin-top: 0; }
   .page--planner .option-grid { grid-template-columns: minmax(0, 1fr); }
   .page--planner .trip-card { padding: 13px; }
   .page--planner .results-pagination { gap: 6px; }

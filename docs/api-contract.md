@@ -1,8 +1,8 @@
 # Kontrakt REST — City Break Planner v1
 
-Wspólna baza dla SOL-116–119. Zmiany uzgadnia koordynator przed zmianą klientów
-i serwera. `GET /api/v1/health` pochodzi z SOL-114; wyszukiwanie, przeliczanie
-i zapis planów wdrożono w SOL-116–118. Rzeczywiste integracje pozostają w SOL-119.
+Wspólny kontrakt frontendu i backendu. Wyszukiwanie transportu i atrakcji
+korzysta z demonstracyjnego katalogu SQLite, a noclegi z integracji OBO.
+Zmiany żądań i odpowiedzi aktualizuj razem z oboma klientami kontraktu.
 
 ## Konwencje i stan aplikacji
 
@@ -29,7 +29,7 @@ nadmiarowych spacji. Brak parametru lub pusta wartość zwraca cały katalog.
 Brak dopasowania zwraca pustą tablicę.
 
 `value` trafia do `origin` lub `destination` w żądaniu wyszukiwania.
-`label` jest etykietą dla użytkownika. W trybie live katalog obejmuje
+`label` jest etykietą dla użytkownika. W trybie demo katalog obejmuje
 Amsterdam, Londyn i Paryż z lokalnego katalogu SQLite. Wpisy „London” i
 „Paris” są akceptowane jako aliasy przy wyszukiwaniu. Wyniki i plany demo
 mają `testData: true`.
@@ -83,12 +83,10 @@ Puste `roundTripOptions` samo nie potwierdza braku połączeń. Nieznana cena
 nie oznacza braku kursu. Awaria źródła nie może zmienić się w `NO_CONNECTION`.
 Każdy odczyt `sources[]`: `sourceId`, `url`, `checkedAt`,
 `status: OK | NO_CONNECTION | NO_COVERAGE | PROVIDER_ERROR`, `message` (string lub null).
-Opcjonalny `reasonCode` rozróżnia `UNSUPPORTED_ROUTE`, `OUTSIDE_COVERAGE`,
-`UPSTREAM_FAILURE` i `NOT_CONFIGURED`. `NO_COVERAGE` oznacza brak pokrycia
-trasy lub daty przez źródło, a nie potwierdzony brak kursów.
-`UNRECOGNIZED_PUBLICATION` oznacza, że zmieniona treść publikacji nie
-pozwoliła bezpiecznie odczytać wymaganych danych.
-`AMBIGUOUS_PLACE` oznacza, że wpis pasuje do więcej niż jednej stacji.
+Opcjonalny `reasonCode` opisuje szczegółową przyczynę braku danych.
+`NO_COVERAGE` oznacza brak pokrycia trasy lub daty przez źródło,
+a nie potwierdzony brak kursów. Nieznany kod klient obsługuje ogólnym
+komunikatem właściwym dla statusu odpowiedzi.
 Wyszukiwanie transportu i obliczanie priorytetów korzysta z SQLite. Para
 spoza katalogu zwraca `UNSUPPORTED_ROUTE`. Gdy zapisane warianty nie
 pasują do dat, w szczególności powrót wypada przed przyjazdem, zwracany
@@ -111,12 +109,12 @@ Przejazdy wariantu muszą pozostawiać dodatni czas na miejscu.
 `POST /api/v1/recommendations` przyjmuje `criteria`, `roundTripId`,
 `interest` (`MIXED`, `CULTURE`, `OUTDOORS`, `HISTORY`) i `budgetPln`
 (liczba całkowita 0–10000, łączny budżet wstępów dla całej grupy).
-Zwraca `{suggestions: [{attractionId, reason}], aiUsed}`.
+Zwraca `{suggestions: [{attractionId, reason}]}`.
 Zbiór do trzech propozycji podlega kontroli wspólnego budżetu, godzin
 otwarcia, dojazdów oraz powrotu. Serwer odczytuje wariant i atrakcje z bazy.
-Klucz OpenAI pozwala nadać priorytet propozycjom po kliknięciu przycisku
-w UI. Przy braku odpowiedzi stosowany jest wybór z katalogu. Propozycje
-nie zmieniają planu automatycznie.
+Dobór jest lokalny i deterministyczny: najpierw preferuje zainteresowania,
+a potem uzupełnia propozycje innymi pasującymi miejscami. Propozycje nie
+zmieniają planu automatycznie.
 
 ## Ceny i atrakcje
 

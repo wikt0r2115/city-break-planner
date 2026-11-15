@@ -1,99 +1,48 @@
-# Testowa sekcja noclegów OBO — 14 listopada 2026
+# Integracja noclegów OBO
 
-Rozszerzenie integracji z SOL-119 na bezpośrednią prośbę właściciela.
-Osobny formularz w edytorze wykorzystuje miasto i daty planu jako propozycje.
-Rzeczywiste noclegi są wyceniane niezależnie od demonstracyjnego transportu.
-Wyszukiwanie następuje wyłącznie po naciśnięciu „Sprawdź noclegi”.
+`POST /api/v1/stays/search` wywołuje stały serwer MCP OBO przez backend.
+Wyszukiwanie jest jawnie uruchamiane przez użytkownika, bez narzędzi
+rezerwacji. Klucz `OBO_API_KEY` jest opcjonalny i pozostaje na serwerze.
 
-## Zakres
+## Dane i cykl życia
 
-- Backend: `POST /api/v1/stays/search`, walidacja, adapter JSON-RPC do
-  stałego serwera OBO, trzy oferty dla jednego pokoju, opcjonalny poufny klucz.
-- Frontend: edytowalne miasto/daty, liczba dorosłych, waluta, cena całego
-  pobytu, podatki/dopłaty/uwagi, źródło i czas wyceny, oryginalny link do OBO.
-- Wyniki krótkotrwałe: brak zapisu hoteli w SQLite, Plan DTO, localStorage oraz
-  publicznym widoku. Świeże oferty i formularze są zachowywane w sessionStorage
-  bieżącej karty do końca pierwotnego TTL (maksymalnie 30 minut od wyceny),
-  także przez odświeżenie strony. Nie ma kopii katalogu ani plików zdjęć.
-  Fotografie są hotlinkowane z OBO bez przycinania, a współrzędne z tej samej
-  odpowiedzi wyszukiwania trafiają do znaczników H w istniejącej mapie.
-- Nie wywołujemy AI ani narzędzi rezerwacji. Płatności i potwierdzenie
-  ceny odbywają się po przejściu użytkownika na stronę dostawcy.
+- Parametry obejmują miasto, daty, walutę, dorosłych i pokoje. Liczba osób
+  pochodzi z Kierunku, a pokoje wybiera się w Noclegu: 1–8, najwyżej tyle,
+  ile dorosłych. W odpowiedzi są najwyżej trzy oferty.
+- Cena dotyczy całego pobytu i grupy. Nie mnożymy jej przez osoby ani pokoje.
+  Podatki, dopłaty i cena za noc są wyświetlane, jeśli dostawca je podał.
+- Zdjęcia i współrzędne pochodzą z tego samego wyszukiwania; nie pobieramy
+  osobnych szczegółów hotelu. Zdjęcia są wyświetlane z adresów dostawcy.
+- Formularze i świeże wyniki pozostają w `sessionStorage` bieżącej karty.
+  Cache mieści trzy wyszukiwania i wygasa najpóźniej 30 minut od wyceny;
+  odczyt nie przedłuża TTL. F5 i nawigacja nie ponawiają świeżego wyszukiwania.
+- Oferty, ceny, tokeny, zdjęcia i linki nie trafiają do SQLite. Po wyborze
+  hotelu zapisany plan może zachować nazwę i współrzędne jako bazę zwiedzania,
+  widoczną także publicznie. Wygaśnięcie wyceny nie usuwa tej bazy.
+- Po wyborze noclegu mapa usuwa pozostałe oferty. Baza wpływa na szacowane
+  dojście do atrakcji; [ograniczenia estymacji](wizard-verification.md).
+- Puste lub nieczytelne wyniki pokazują informację o niedostępności partnerów
+  i samodzielnym szukaniu. Poprawne oferty częściowej odpowiedzi są wyświetlane.
 
-## Weryfikacja kontrolowana
+Backend ogranicza rozmiar odpowiedzi i czas odczytu, nie podąża za
+przekierowaniami i dopuszcza jedno aktywne wyszukiwanie z co najmniej 6 s
+pomiędzy startami. Nie wykonuje automatycznych ponowień. Wyceny są zwracane
+z `Cache-Control: no-store`; poufne klucze nie trafiają do przeglądarki.
 
-- `backend`: `./mvnw -B -ntp test` — 51 testów PASS; `./mvnw -B -ntp package -DskipTests`
-  — build PASS. Nowe testy obejmują
-  poprawne i częściowe wyniki, rzeczywistą świeżość cache, wygasłe oferty,
-  niebezpieczne linki, HTTP 429, JSON-RPC RATE_LIMITED, timeout, błędne i zbyt
-  duże odpowiedzi, przekierowania, ceny z ogromnym wykładnikiem, walidację
-  parametrów i `Cache-Control: no-store` także dla błędów.
-  Końcowy test rozróżniania miast sprawdza aliasy Paryża/Londynu/Amsterdamu
-  oraz zachowanie jawnie doprecyzowanego `Paris, Texas` i innych miast.
-- `frontend`: `npm test` — 81 testów PASS, w tym testy sekcji noclegów
-  (walidacja, granice dat, wygasanie, anulowanie opóźnionych odpowiedzi,
-  pagehide, nullable dopłaty, błędne linki, timeout i limity).
-  `npm run build` — PASS.
-- `e2e`: `E2E_SKIP_BUILD=1 npm run test:stays` — PASS. Prawdziwy frontend,
-  lokalny backend i tymczasowy SQLite; odpowiedzi hotelowe są kontrolowanymi,
-  jawnie oznaczonymi danymi testowymi przechwyconymi przez Playwright.
-  Sprawdzono brak automatycznych zapytań, formularz, ceny i dopłaty,
-  oryginalne linki, zdjęcie i znacznik hotelu, popup, widok 360 px,
-  usunięcie wygasłych cen/linków/markerów, cooldown, odrębny brak ofert
-  i błąd dostawcy oraz zapis planu bez danych hoteli i ich brak w widoku publicznym.
-  **Liczba wywołań wyszukiwania noclegów pozostała równa 1** po powtórnym
-  kliknięciu i przeładowaniu strony. Roboczy plan, oferta, zdjęcie i marker
-  zostały odtworzone. Osobna sesja przeglądarki nie odziedziczyła cache.
-- Recenzja niezależna: brak otwartych blokad bezpieczeństwa. Wprowadzono
-  ograniczenie pamięci podczas odczytu (1 MB), całkowity timeout, brak
-  przekierowań, jeden odczyt naraz i co najmniej 6 s pomiędzy startami.
-  Poufny klucz jest przekazywany wyłącznie backendowi. Nie ma logowania
-  surowych odpowiedzi dostawcy ani automatycznych ponowień.
-- `docker compose --env-file .env.docker up --build -d --wait --wait-timeout 180`
-  — PASS, frontend i backend `healthy`, wolumen SQLite zachowany.
+## Weryfikacja
 
-Użyto Java 25, Node 22.23.4 i Chrome. Testy z lokalnymi serwerami i Mockito
-wymagały wyjścia poza sandbox. Zrzut kontrolowanej sekcji mobilnej:
-ignorowany `e2e/artifacts/stays-mobile.png`.
+Testy Java sprawdzają parser, walidację, limity, timeouty i błędne odpowiedzi.
+`npm test` we frontendzie obejmuje formularz, linki, wygasanie, anulowanie
+spóźnionych odpowiedzi oraz cache. Z katalogu `e2e/` uruchom:
 
-## Rzeczywiste źródło
+```bash
+npm run test:stays
+```
 
-Sprawdzono bezpośrednie wywołanie OBO dla Paryża, 21–23 listopada 2026,
-dwóch dorosłych, jednego pokoju i PLN. OBO zwróciło HTTP 200, aktualne
-wyceny z `quoted_at` i `age_seconds`, linki rezerwacji i `partial=true`.
-Nie utrwalamy w tym raporcie nazw hoteli, cen ani wygasających linków.
+Scenariusz używa prawdziwego frontendu, API i SQLite oraz kontrolowanych
+ofert hotelowych. Sprawdza m.in. brak ponownego wyszukiwania po F5,
+pokoje, zdjęcia, markery, wybór i usunięcie bazy oraz minimalny zapis planu.
+Pełne przygotowanie opisuje [instrukcja testów](acceptance.md).
 
-Końcowe sprawdzenie przez rzeczywisty interfejs na `http://localhost:8080`
-po przebudowie kontenerów: **PASS**. Formularz z `Paryż` i tym samym pobytem
-zwrócił HTTP 200, `status: PARTIAL`, trzy aktualne oferty w PLN i
-`Cache-Control: no-store`. Karty i oryginalne linki wyświetliły się poprawnie
-na ekranie 360 px. W pierwotnej wersji odświeżenie usuwało wyniki; bieżące
-zachowanie cache opisano i przetestowano wyżej. Health i SQLite
-zwróciły `UP`. Nie zapisano testowego planu w trwałej bazie. OBO otrzymuje
-kraj FR dla dokładnej nazwy Paryża; analogicznie GB/NL dla Londynu/Amsterdamu,
-bez narzucania kraju innym lub jawnie doprecyzowanym nazwom miast.
-
-Końcowy test wersji ze zdjęciami, lokalizacją i cache na rzeczywistym Dockerze:
-**PASS**. OBO zwróciło trzy aktualne oferty w PLN (`PARTIAL`), wszystkie ze
-zdjęciem i współrzędnymi. Przeglądarka załadowała prawdziwe zdjęcie i pokazała
-trzy znaczniki H; przycisk karty otworzył popup hotelu. Po powtórnym kliknięciu
-i F5 licznik żądań `/api/v1/stays/search` nadal wynosił **1**, a karty i markery
-wróciły z cache. Widok 360 px nie miał poziomego przewijania; SQLite `UP`.
-Nie utrwalano zdjęć, szczegółów ofert ani testowych planów w trwałej bazie.
-Jeden wcześniejszy przebieg rzeczywistego źródła zwrócił `PROVIDER_ERROR`;
-ręczne ponowienie dało poprawne oferty. Błędy nie są cache'owane.
-
-[Dokumentacja OBO](https://onebookingonline.com/mcp) i
-[warunki danych](https://onebookingonline.com/api-terms).
-Sprawdzenie integracji nie potwierdza kompletności ofert ani gwarancji
-ceny do chwili checkoutu. Nie testowano rezerwacji, płatności, darmowego
-anulowania, Safari ani Firefox.
-
-## Aktualizacja: pokoje i baza noclegowa
-
-Powyższe odczyty rzeczywiste są historycznymi próbami dla jednego pokoju.
-Nowsza wersja obsługuje rooms1–8 (<=adults), bez mnożenia kwoty dostawcy.
-Oferty i ceny pozostają w cache sesji; po świadomym wyborze można zapisać
-nazwę i współrzędne hotelu jako bazę zwiedzania. To punkt planu, a nie
-archiwum wyceny ani potwierdzenie rezerwacji.
-[Weryfikacja nowej wersji i granice szacowania dojść](wizard-verification.md).
+Testy nie gwarantują bieżącej dostępności ani cen OBO. Rezerwacja i płatność
+odbywają się po przejściu na stronę dostawcy i nie są częścią aplikacji.

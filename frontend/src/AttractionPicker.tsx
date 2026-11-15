@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import type { ReactNode } from 'react';
 import { Prices } from './components';
 import { duration } from './format';
 import type { Attraction, Interest, PlanItem, Recommendations } from './types';
@@ -11,15 +10,9 @@ type Props = {
   contextKey: string;
   onRecommend: (interest: Interest, budget: number) => Promise<Recommendations | null>;
   onAdd: (attraction: Attraction) => void;
-  compact?: boolean;
 };
 
-function RecommendationPanel({ compact, children }: { compact: boolean; children: ReactNode }) {
-  return compact ? <details className="attraction-card recommendation-form"><summary>Dobierz atrakcje</summary>{children}</details>
-    : <section className="attraction-card recommendation-form"><h4>Dobierz atrakcje</h4>{children}</section>;
-}
-
-export function AttractionPicker({ attractions, selected, disabled, contextKey, onRecommend, onAdd, compact = false }: Props) {
+export function AttractionPicker({ attractions, selected, disabled, contextKey, onRecommend, onAdd }: Props) {
   const [interest, setInterest] = useState<Interest>('MIXED');
   const [budget, setBudget] = useState('150');
   const [error, setError] = useState('');
@@ -33,7 +26,7 @@ export function AttractionPicker({ attractions, selected, disabled, contextKey, 
     setPage(0);
   }, [contextKey]);
   const activePage = Math.min(page, Math.max(0, attractions.length - 1));
-  const displayed = compact ? attractions.slice(activePage, activePage + 1) : attractions;
+  const displayed = attractions.slice(activePage, activePage + 1);
 
   async function requestRecommendations() {
     const limit = Number(budget);
@@ -47,10 +40,10 @@ export function AttractionPicker({ attractions, selected, disabled, contextKey, 
     if (data) setResponse({ contextKey, data });
   }
 
-  return <aside className={`attraction-list${compact ? ' is-compact attraction-list--compact' : ''}`} aria-labelledby="attractions-title">
+  return <aside className="attraction-list" aria-labelledby="attractions-title">
     <h3 id="attractions-title">Jeszcze coś do odkrycia</h3>
     {attractions.length === 0 ? <p className="empty-note">Nie ma dostępnych propozycji atrakcji. Zapisane miejsca pozostają w planie.</p>
-      : <RecommendationPanel compact={compact}>
+      : <details className="attraction-card recommendation-form"><summary>Dobierz atrakcje</summary>
         <label>Zainteresowania
           <select value={interest} disabled={disabled} onChange={(event) => {
             setInterest(event.target.value as Interest);
@@ -77,7 +70,7 @@ export function AttractionPicker({ attractions, selected, disabled, contextKey, 
         </button>
         {recommendations && <div role="status">
           <p>{recommendations.suggestions.length === 0 ? 'Brak atrakcji w tym budżecie i czasie.'
-            : recommendations.aiUsed ? 'Propozycje z pomocą AI' : 'Propozycje z katalogu'}</p>
+            : 'Propozycje z katalogu'}</p>
           {recommendations.suggestions.length > 0 && <ul>{recommendations.suggestions.map((item) => {
             const attraction = attractions.find((visit) => visit.id === item.attractionId);
             if (!attraction) return null;
@@ -90,8 +83,8 @@ export function AttractionPicker({ attractions, selected, disabled, contextKey, 
             </li>;
           })}</ul>}
         </div>}
-      </RecommendationPanel>}
-    {compact && attractions.length > 1 && <nav className="compact-pagination" aria-label="Strony atrakcji">
+      </details>}
+    {attractions.length > 1 && <nav className="compact-pagination" aria-label="Strony atrakcji">
       <button type="button" className="text-button" disabled={activePage === 0} onClick={() => setPage((value) => Math.max(0, value - 1))}>Poprzednia atrakcja</button>
       <span role="status">Atrakcja {activePage + 1} z {attractions.length}</span>
       <button type="button" className="text-button" disabled={activePage >= attractions.length - 1} onClick={() => setPage((value) => Math.min(attractions.length - 1, value + 1))}>Następna atrakcja</button>

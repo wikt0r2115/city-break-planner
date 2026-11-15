@@ -38,13 +38,12 @@ function TripLeg({ journey, title, compact = false }: { journey: Journey; title:
   </section>;
 }
 
-function TripCard({ trip, rank, selected, busy, onSelect, compact = false, travelers = 1 }: {
+function TripCard({ trip, rank, selected, busy, onSelect, travelers = 1 }: {
   trip: RoundTrip;
   rank: number;
   selected: boolean;
   busy: boolean;
   onSelect: (trip: RoundTrip) => void;
-  compact?: boolean;
   travelers?: number;
 }) {
   const { complete, total, currency } = trip.costSummary;
@@ -67,8 +66,8 @@ function TripCard({ trip, rank, selected, busy, onSelect, compact = false, trave
       {selected && <span className="selected-badge">Wybrany</span>}
     </div>
     {showMetrics && <TripMetrics trip={trip} />}
-    <TripLeg journey={trip.outbound} title="Wyjazd" compact={compact} />
-    <TripLeg journey={trip.returnJourney} title="Powrót" compact={compact} />
+    <TripLeg journey={trip.outbound} title="Wyjazd" compact />
+    <TripLeg journey={trip.returnJourney} title="Powrót" compact />
   </article>;
 }
 
@@ -76,12 +75,6 @@ export function emptySearchMessage({ status, sources }: SearchResult) {
   const reasons = new Set(sources.map((source) => source.reasonCode));
   if (status === 'NO_CONNECTION') {
     return { style: 'empty', title: 'Brak potwierdzonych połączeń', hint: 'Spróbuj zmienić termin.' };
-  }
-  if (reasons.has('AMBIGUOUS_PLACE')) {
-    return { style: 'empty', title: 'Doprecyzuj miejsce', hint: 'Wpisz pełną nazwę stacji lub wybierz podpowiedź.' };
-  }
-  if (reasons.has('OUTSIDE_COVERAGE')) {
-    return { style: 'empty', title: 'Brak rozkładu dla wybranych dat', hint: 'Wybierz termin objęty opublikowanym rozkładem.' };
   }
   if (status === 'PROVIDER_ERROR') {
     return { style: 'error', title: 'Nie udało się sprawdzić połączeń', hint: 'Spróbuj ponownie.' };
@@ -101,15 +94,13 @@ function ResultStatus({ result }: { result: SearchResult }) {
   </div>;
 }
 
-export function TripResults({ result, selectedId, busy, onSelect, compact = false }: {
+export function TripResults({ result, selectedId, busy, onSelect }: {
   result: SearchResult;
   selectedId?: string;
   busy: boolean;
   onSelect: (trip: RoundTrip) => void;
-  compact?: boolean;
 }) {
-  const defaultPageSize = useSyncExternalStore(subscribeToResultsWidth, variantsPerPage);
-  const pageSize = compact ? defaultPageSize : Math.max(2, defaultPageSize);
+  const pageSize = useSyncExternalStore(subscribeToResultsWidth, variantsPerPage);
   const [visibleIndex, setVisibleIndex] = useState(0);
   const trips = result.roundTripOptions;
   const pageCount = Math.ceil(trips.length / pageSize);
@@ -130,7 +121,6 @@ export function TripResults({ result, selectedId, busy, onSelect, compact = fals
         selected={trip.id === selectedId}
         busy={busy}
         onSelect={onSelect}
-        compact={compact}
       />)}
     </div>}
     {pageCount > 1 && <nav className="results-pagination" aria-label="Strony wyników">
