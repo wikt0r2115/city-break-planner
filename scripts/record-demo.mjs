@@ -127,6 +127,8 @@ async function caption(page, text) {
       bar = document.createElement('div'); bar.id = 'recording-caption'; document.body.append(bar);
       Object.assign(bar.style, { position: 'fixed', inset: '0 0 auto 0', zIndex: '2147483647', background: '#fff1ba', color: '#392a08', padding: '13px 22px', font: '700 17px/1.4 system-ui,sans-serif', boxShadow: '0 2px 10px #0002', pointerEvents: 'none' });
       document.body.style.paddingTop = '52px';
+      const planner = document.querySelector('.page--planner');
+      if (planner) planner.style.height = 'calc(100dvh - 52px)';
     }
     bar.textContent = `${label} · DANE TESTOWE — fikcyjne ceny i połączenia`;
   }, text);
@@ -162,6 +164,9 @@ try {
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   const frames = [];
+  const stage = (name) => page.getByRole('navigation', { name: 'Etapy planowania' }).getByRole('button', { name, exact: true }).click();
+  const preview = () => page.waitForResponse((response) => response.url().endsWith('/plans/preview') && response.request().method() === 'POST');
+  const idle = () => page.waitForFunction(() => !document.querySelector('#wizard-search-form fieldset')?.disabled);
   async function frame(label, duration) {
     await caption(page, label);
     await pause(150);
@@ -179,31 +184,40 @@ try {
   const search = page.waitForResponse((response) => response.url().endsWith('/searches') && response.request().method() === 'POST');
   await page.getByRole('button', { name: /Znajdź połączenia/ }).click();
   assert.equal((await (await search).json()).testData, true, 'Refusing to record fictional fixtures without their explicit API label');
-  await page.getByRole('heading', { name: 'Twój plan zwiedzania' }).waitFor();
+  await page.getByRole('heading', { name: 'Wybierz połączenie', exact: true }).waitFor();
   await page.locator('.test-banner').waitFor();
-  assert.equal(await page.locator('.schedule > li').count(), 3);
-  await page.getByRole('heading', { name: 'Warszawa → Gdańsk', exact: true }).evaluate((element) => element.scrollIntoView({ block: 'start' }));
-  await page.evaluate(() => window.scrollBy(0, -75));
+  assert.equal(await page.locator('.schedule > li').count(), 0);
   await frame('2 / Wyniki i alternatywne powroty', 2000);
+
+  await page.getByRole('button', { name: 'Dalej: Nocleg', exact: true }).click();
+  await page.getByRole('button', { name: 'Pomiń nocleg', exact: true }).click();
+  for (let index = 0; index < 3; index++) {
+    await Promise.all([preview(), page.getByRole('button', { name: /^Dodaj:/ }).click()]);
+    await idle();
+    if (index < 2) await page.getByRole('button', { name: 'Następna atrakcja', exact: true }).click();
+  }
+  assert.equal(await page.locator('.schedule > li').count(), 3);
+  await stage('Połączenie');
 
   const names = await page.locator('.schedule > li h4').allTextContents();
   const early = page.getByRole('button', { name: /^Wariant .*powrót.*14:00/i });
   const next = page.getByRole('button', { name: 'Następna' });
   while (!await early.count() && await next.isEnabled()) await next.click();
-  await early.click({ position: { x: 12, y: 12 } });
-  await page.locator('.conflicts').first().waitFor();
+  await Promise.all([preview(), early.click({ position: { x: 12, y: 12 } })]);
+  await idle();
   assert.deepEqual(await page.locator('.schedule > li h4').allTextContents(), names);
-  await early.evaluate((element) => element.closest('.trip-card').scrollIntoView({ block: 'start' }));
-  await page.evaluate(() => window.scrollBy(0, -75));
   await frame('3 / Wybrano wcześniejszy powrót: 14:00', 1800);
+  await stage('Atrakcje');
+  await page.getByRole('button', { name: /^Harmonogram/ }).click();
+  await page.locator('.conflicts').first().waitFor();
   await page.locator('.conflicts').first().evaluate((element) => element.scrollIntoView({ block: 'center' }));
   await frame('4 / Konflikt ma powód; wybrane miejsca zostają', 2600);
 
+  await page.getByRole('button', { name: 'Dalej: Podsumowanie', exact: true }).click();
   await page.getByRole('button', { name: /Zapisz plan/ }).click();
   await page.waitForURL(/\/plans\/[^/]+$/);
   const share = await page.getByLabel('Link tylko do odczytu', { exact: true }).inputValue();
   await page.getByRole('heading', { name: 'Dobry plan warto zachować.', exact: true }).evaluate((element) => element.closest('section').scrollIntoView({ block: 'start' }));
-  await page.evaluate(() => window.scrollBy(0, -75));
   await frame('5 / Zapis i niezależny link do odczytu', 2200);
 
   const publicContext = await browser.newContext({ viewport: { width: 1240, height: 800 }, locale: 'pl-PL', timezoneId: 'Europe/Warsaw' });
@@ -211,7 +225,7 @@ try {
   await publicPage.goto(share);
   await publicPage.getByText('Tylko do odczytu', { exact: true }).waitFor();
   await publicPage.locator('.test-banner').waitFor();
-  assert.equal(await publicPage.getByRole('button').count(), 0);
+  assert.equal(await publicPage.getByRole('button', { name: /Zapisz|Usuń|Przesuń|Dodaj|Kopiuj link/ }).count(), 0);
   await caption(publicPage, '6 / Odbiorca ogląda plan bez prawa edycji');
   const publicFrame = path.join(work, `frame-${frames.length}.png`);
   await publicPage.screenshot({ path: publicFrame });
